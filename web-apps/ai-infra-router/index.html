@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Infrastructure Router & SOW Generator</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #111827;
+      --border: #1f2937;
+      --accent: #3b82f6;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 2rem;
+      line-height: 1.5;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header { margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+    h1 { font-size: 1.5rem; color: #fff; margin-bottom: 0.5rem; }
+    p.subtitle { color: var(--muted); font-size: 0.875rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+    .card h2 { font-size: 1rem; color: var(--accent); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.25rem; text-transform: uppercase; }
+    input, select, textarea {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.875rem;
+    }
+    textarea { font-family: var(--font-mono); resize: vertical; height: 80px; }
+    input:focus, select:focus, textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+    .metrics-box {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .metric-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.875rem; }
+    .metric-row:last-child { margin-bottom: 0; }
+    .metric-value { font-family: var(--font-mono); font-weight: bold; color: #fff; }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-api { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6; }
+    .badge-self { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+    .badge-hybrid { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      font-size: 0.875rem;
+    }
+    button:hover { opacity: 0.9; }
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      padding: 1rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      color: #d1d5db;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>AI Infrastructure Router & SOW Generator</h1>
+    <p class="subtitle">Zero-cost client-side deterministic decision engine for enterprise MLOps</p>
+  </header>
+
+  <div class="grid">
+    <!-- INPUT CONTROL PANEL -->
+    <div class="card">
+      <h2>Workload Parameters</h2>
+      
+      <div class="form-group">
+        <label for="monthlyTokens">Monthly Volume (Millions of Tokens)</label>
+        <input type="number" id="monthlyTokens" value="750" min="10" max="10000" oninput="calculateArchitecture()">
+      </div>
+
+      <div class="form-group">
+        <label for="latencySla">Max Latency Budget (TTFT in ms)</label>
+        <input type="number" id="latencySla" value="180" step="10" oninput="calculateArchitecture()">
+      </div>
+
+      <div class="form-group">
+        <label for="sovereignty">Data Sovereignty Requirement</label>
+        <select id="sovereignty" onchange="calculateArchitecture()">
+          <option value="low">Level 1: Public / Low Sensitivity</option>
+          <option value="med" selected>Level 2: Business Sensitive (ZDR Contract Required)</option>
+          <option value="high">Level 3: Strict Isolation (Air-gapped / VPC Only)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="payloadScrubber">Client-Side Sanitize (Test Text Ingestion)</label>
+        <textarea id="payloadScrubber" placeholder="Paste sample user payload with emails or IPs to sanitize..." oninput="scrubData()"></textarea>
+      </div>
+      <div id="scrubOutput" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--success); margin-top: -0.5rem; margin-bottom: 1rem;"></div>
+    </div>
+
+    <!-- DECISION & RECOMMENDATION -->
+    <div class="card">
+      <h2>Architectural Output</h2>
+      
+      <div class="metrics-box">
+        <div class="metric-row">
+          <span>Recommended Routing Topology:</span>
+          <span id="topologyBadge" class="badge badge-api">Calculating...</span>
+        </div>
+        <div class="metric-row">
+          <span>Est. Managed API Cost:</span>
+          <span id="apiCost" class="metric-value">$0 / mo</span>
+        </div>
+        <div class="metric-row">
+          <span>Est. Self-Hosted Infra Cost:</span>
+          <span id="selfCost" class="metric-value">$0 / mo</span>
+        </div>
+        <div class="metric-row">
+          <span>Optimal Target Endpoint:</span>
+          <span id="targetModel" class="metric-value">-</span>
+        </div>
+      </div>
+
+      <button onclick="generateSOW()">Generate Infrastructure SOW</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 1.5rem;">
+    <h2>Generated Statement of Work (SOW)</h2>
+    <pre id="sowOutput">// Adjust parameters above to automatically generate architectural SOW...</pre>
+  </div>
+</div>
+
+<script>
+  function calculateArchitecture() {
+    const tokens = parseFloat(document.getElementById('monthlyTokens').value) || 0;
+    const latency = parseFloat(document.getElementById('latencySla').value) || 0;
+    const sovereignty = document.getElementById('sovereignty').value;
+
+    // Pricing models
+    // Managed API blend: $3.00 per M tokens
+    const managedCost = tokens * 3.00;
+    
+    // Self-hosted: $2,500 per A100 instance/mo + $15k allocated SRE overhead fraction
+    // 1 A100 handles ~250M tokens/mo under standard loads
+    const instancesNeeded = Math.ceil(tokens / 250);
+    const infraCost = instancesNeeded * 2500;
+    const sreOverhead = tokens > 200 ? 12000 : 4000;
+    const selfHostedTotal = infraCost + sreOverhead;
+
+    let topology = "";
+    let badgeClass = "";
+    let target = "";
+
+    if (sovereignty === "high") {
+      topology = "Self-Hosted VPC";
+      badgeClass = "badge-self";
+      target = "vLLM / Llama-3-70B-Instruct (Private Cluster)";
+    } else if (tokens > 500 && latency < 200) {
+      topology = "Self-Hosted Dedicated";
+      badgeClass = "badge-self";
+      target = "Dedicated A100 Cluster + vLLM PagedAttention";
+    } else if (tokens > 300) {
+      topology = "Hybrid Tiered Routing";
+      badgeClass = "badge-hybrid";
+      target = "Local Edge (8B) + Managed Fallback (70B)";
+    } else {
+      topology = "Pure Managed API";
+      badgeClass = "badge-api";
+      target = "Managed Provider API + Serverless Edge";
+    }
+
+    document.getElementById('apiCost').textContent = `$${Math.round(managedCost).toLocaleString()} / mo`;
+    document.getElementById('selfCost').textContent = `$${Math.round(selfHostedTotal).toLocaleString()} / mo`;
+    
+    const badgeEl = document.getElementById('topologyBadge');
+    badgeEl.textContent = topology;
+    badgeEl.className = `badge ${badgeClass}`;
+    
+    document.getElementById('targetModel').textContent = target;
+  }
+
+  function scrubData() {
+    const input = document.getElementById('payloadScrubber').value;
+    // Client-side regex scrubbing for email and IPv4
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g;
+    
+    let sanitized = input.replace(emailRegex, '[REDACTED_EMAIL]');
+    sanitized = sanitized.replace(ipRegex, '[REDACTED_IP]');
+    
+    const outputEl = document.getElementById('scrubOutput');
+    if(input.length > 0) {
+      outputEl.textContent = `Clean Output: "${sanitized}"`;
+    } else {
+      outputEl.textContent = '';
+    }
+  }
+
+  function generateSOW() {
+    const tokens = document.getElementById('monthlyTokens').value;
+    const latency = document.getElementById('latencySla').value;
+    const sovereignty = document.getElementById('sovereignty').value;
+    const topology = document.getElementById('topologyBadge').textContent;
+    const target = document.getElementById('targetModel').textContent;
+    const apiCost = document.getElementById('apiCost').textContent;
+    const selfCost = document.getElementById('selfCost').textContent;
+
+    const sow = `================================================================================
+STATEMENT OF WORK: ENTERPRISE AI INFRASTRUCTURE DEPLOYMENT
+================================================================================
+Date: ${new Date().toISOString().split('T')[0]}
+Status: APPROVED ARCHITECTURAL SPECIFICATION
+
+1. EXECUTIVE SUMMARY & CONSTRAINTS
+--------------------------------------------------------------------------------
+- Projected Monthly Token Volume : ${tokens} Million Tokens
+- Target Latency SLA (TTFT)       : <= ${latency} ms
+- Data Sovereignty Tier          : ${sovereignty.toUpperCase()}
+- Selected Topology              : ${topology}
+
+2. COST ESTIMATION MATRIX
+--------------------------------------------------------------------------------
+- Managed API Baseline Estimate   : ${apiCost}
+- Dedicated Self-Hosted Estimate  : ${selfCost}
+- Primary Deployment Target      : ${target}
+
+3. MANDATORY IMPLEMENTATION PHASES
+--------------------------------------------------------------------------------
+[Phase 1: Ingestion & Scrubbing]
+  - Deploy zero-dependency regex payload scrubber at application boundary.
+  - Strip emails, static IP addresses, and customer secrets prior to egress.
+
+[Phase 2: Execution Topology & Gateway]
+  - Configure deterministic router with strict failover thresholds.
+  - Implement P99 latency alerts set at ${latency}ms TTFT ceiling.
+
+[Phase 3: Observability & Schema Guardrails]
+  - Enforce native JSON Schema decoding to guarantee output parsing validity.
+  - Track token utilization with local counter metrics without external logging overhead.
+================================================================================`;
+
+    document.getElementById('sowOutput').textContent = sow;
+  }
+
+  // Initial calculation
+  calculateArchitecture();
+</script>
+</body>
+</html>
