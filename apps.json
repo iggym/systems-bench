@@ -5,10 +5,10 @@
       "id": "meter-shock",
       "name": "Meter Shock",
       "url": "web-apps/meter-shock/index.html",
-      "description": "Diagnostic tool that surfaces hidden fee drag and usage-based billing shock before it hits your invoice.",
+      "description": "See the month your usage-based bill blows past what you budgeted for, before it happens.",
       "tags": ["diagnostic", "billing"],
       "status": "live",
-      "dateAdded": "2026-06-01"
+      "dateAdded": "2026-07-30"
     },
     {
       "id": "pipeline-rot",
@@ -16,8 +16,8 @@
       "url": "web-apps/pipeline-rot/index.html",
       "description": "Scores a data or ML pipeline against common decay patterns and flags where silent failure is most likely.",
       "tags": ["diagnostic", "mlops"],
-      "status": "beta",
-      "dateAdded": "2026-06-15"
+      "status": "live",
+      "dateAdded": "2026-07-30"
     },
     {
       "id": "zombie-stack",
@@ -26,7 +26,7 @@
       "description": "Finds subscriptions and services still running in a stack long after the workload that justified them is gone.",
       "tags": ["diagnostic", "cost"],
       "status": "live",
-      "dateAdded": "2026-06-20"
+      "dateAdded": "2026-07-30"
     }
   ]
 }
