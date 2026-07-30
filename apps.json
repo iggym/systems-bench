@@ -1,0 +1,32 @@
+{
+  "lastUpdated": "2026-07-30",
+  "apps": [
+    {
+      "id": "meter-shock",
+      "name": "Meter Shock",
+      "url": "web-apps/meter-shock/index.html",
+      "description": "Diagnostic tool that surfaces hidden fee drag and usage-based billing shock before it hits your invoice.",
+      "tags": ["diagnostic", "billing"],
+      "status": "live",
+      "dateAdded": "2026-06-01"
+    },
+    {
+      "id": "pipeline-rot",
+      "name": "Pipeline Rot",
+      "url": "web-apps/pipeline-rot/index.html",
+      "description": "Scores a data or ML pipeline against common decay patterns and flags where silent failure is most likely.",
+      "tags": ["diagnostic", "mlops"],
+      "status": "beta",
+      "dateAdded": "2026-06-15"
+    },
+    {
+      "id": "zombie-stack",
+      "name": "Zombie Stack",
+      "url": "web-apps/zombie-stack/index.html",
+      "description": "Finds subscriptions and services still running in a stack long after the workload that justified them is gone.",
+      "tags": ["diagnostic", "cost"],
+      "status": "live",
+      "dateAdded": "2026-06-20"
+    }
+  ]
+}
