@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zombie Stack — find what you're still paying for</title>
+<meta name="description" content="Line up what's still running in your stack and see what's dead weight before the next invoice.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D0F;
+    --bg-raised:#15181B;
+    --bg-card:#111417;
+    --line:#242A2F;
+    --text:#EDEFF1;
+    --text-mute:#8B939A;
+    --accent:#E8573F;
+    --ok:#5EEAD4;
+    --warn:#FFC857;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  .mono{font-family:'DM Mono', monospace;}
+
+  header{display:flex; align-items:center; justify-content:space-between; padding:18px clamp(18px,4vw,48px); border-bottom:1px solid var(--line);}
+  .back{font-family:'DM Mono', monospace; font-size:12px; color:var(--text-mute); text-decoration:none;}
+  .back:hover{color:var(--accent);}
+  .tool-tag{font-family:'DM Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-mute); border:1px solid var(--line); padding:5px 10px; border-radius:var(--radius);}
+
+  .diagnosis{padding:56px clamp(18px,4vw,48px) 32px; border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:'DM Mono', monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:14px;}
+  h1{font-family:'Fraunces', serif; font-weight:600; font-size:clamp(28px,4vw,42px); line-height:1.1; margin:0 0 12px;}
+  .diagnosis p{color:var(--text-mute); max-width:60ch; line-height:1.6; margin:0; font-size:15px;}
+
+  main{padding:36px clamp(18px,4vw,48px) 80px;}
+
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;}
+  .toolbar .actions{display:flex; gap:10px;}
+  .btn{
+    font-family:'DM Mono', monospace;
+    font-size:12px;
+    padding:9px 14px;
+    border-radius:var(--radius);
+    border:1px solid var(--line);
+    background:var(--bg-card);
+    color:var(--text);
+    cursor:pointer;
+  }
+  .btn:hover{border-color:var(--accent);}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#0B0D0F;}
+
+  .stat-row{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;}
+  .stat{border:1px solid var(--line); border-radius:var(--radius); padding:16px; background:var(--bg-card);}
+  .stat .label{font-family:'DM Mono', monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-mute); margin-bottom:8px;}
+  .stat .value{font-family:'Fraunces', serif; font-size:24px; font-weight:600;}
+  .stat.zombie .value{color:var(--accent);}
+
+  table{width:100%; border-collapse:collapse; background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  thead th{
+    text-align:left;
+    font-family:'DM Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--text-mute);
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{padding:10px 14px; border-bottom:1px solid var(--line); font-size:13.5px;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody input[type=text], tbody input[type=number]{
+    width:100%;
+    background:var(--bg-raised);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:var(--radius);
+    font-family:'Inter', sans-serif;
+    font-size:13px;
+  }
+  tbody input:focus{outline:none; border-color:var(--accent);}
+  select{
+    width:100%;
+    background:var(--bg-raised);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius:var(--radius);
+    font-family:'DM Mono', monospace;
+    font-size:12px;
+  }
+  .status-pill{
+    font-family:'DM Mono', monospace;
+    font-size:10px;
+    padding:4px 8px;
+    border-radius:var(--radius);
+    text-align:center;
+    display:inline-block;
+  }
+  .status-pill.zombie{background:var(--accent); color:#0B0D0F;}
+  .status-pill.watch{background:var(--warn); color:#0B0D0F;}
+  .status-pill.active{background:var(--ok); color:#0B0D0F;}
+  .remove{
+    background:none; border:none; color:var(--text-mute); cursor:pointer; font-size:16px; line-height:1;
+  }
+  .remove:hover{color:var(--accent);}
+
+  .paywall{margin-top:24px; padding:22px; border:1px dashed var(--line); border-radius:var(--radius); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;}
+  .paywall .copy{max-width:52ch;}
+  .paywall h3{font-family:'Fraunces', serif; font-size:17px; margin:0 0 6px;}
+  .paywall p{margin:0; font-size:13px; color:var(--text-mute); line-height:1.5;}
+  .cta{background:var(--accent); color:#0B0D0F; font-family:'DM Mono', monospace; font-size:12px; font-weight:500; text-decoration:none; padding:12px 20px; border-radius:var(--radius); white-space:nowrap;}
+
+  footer{padding:20px clamp(18px,4vw,48px); border-top:1px solid var(--line); font-family:'DM Mono', monospace; font-size:11px; color:var(--text-mute); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+
+  @media (max-width:700px){
+    table, thead, tbody, tr, td{display:block; width:100%;}
+    thead{display:none;}
+    tbody tr{border-bottom:1px solid var(--line); padding:10px 0;}
+    tbody td{border-bottom:none; padding:6px 14px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="../../index.html">&larr; systems-bench</a>
+  <span class="tool-tag">#003 · cost</span>
+</header>
+
+<section class="diagnosis">
+  <div class="eyebrow mono">zombie stack</div>
+  <h1>Something in your stack outlived the reason you turned it on.</h1>
+  <p>List what's running and when it was last actually used. Anything unused 90+ days is a zombie — still billing, no longer earning its keep.</p>
+</section>
+
+<main>
+  <div class="toolbar">
+    <div class="actions">
+      <button class="btn" id="seedBtn">Load common examples</button>
+      <button class="btn" id="addBtn">+ Add row</button>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="label">Total monthly spend</div>
+      <div class="value" id="statTotal">$0</div>
+    </div>
+    <div class="stat zombie">
+      <div class="label">Zombie spend / mo</div>
+      <div class="value" id="statZombie">$0</div>
+    </div>
+    <div class="stat">
+      <div class="label">Zombie spend / yr</div>
+      <div class="value" id="statAnnual">$0</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:32%">Service</th>
+        <th style="width:18%">Monthly cost</th>
+        <th style="width:26%">Last used</th>
+        <th style="width:16%">Status</th>
+        <th style="width:8%"></th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="paywall">
+    <div class="copy">
+      <h3>Cancellation-ready export</h3>
+      <p>A CSV of every flagged zombie with the monthly and annual cost, sorted by savings — ready to hand to whoever signs off on cancellations.</p>
+    </div>
+    <a class="cta" href="https://buy.stripe.com/REPLACE_WITH_PAYMENT_LINK?src=zombie-stack" target="_blank" rel="noopener">Unlock export — $9</a>
+  </div>
+</main>
+
+<footer>
+  <span>zombie stack · a systems-bench tool</span>
+  <span>no data leaves your browser</span>
+</footer>
+
+<script>
+(function(){
+  const rowsEl = document.getElementById('rows');
+  const statTotal = document.getElementById('statTotal');
+  const statZombie = document.getElementById('statZombie');
+  const statAnnual = document.getElementById('statAnnual');
+
+  const USAGE_OPTIONS = [
+    { v:'active', label:'active — used this week', status:'active' },
+    { v:'watch30', label:'unused 30-90 days', status:'watch' },
+    { v:'zombie90', label:'unused 90+ days', status:'zombie' },
+    { v:'unknown', label:'not sure', status:'watch' },
+  ];
+
+  const SEED = [
+    { name:'Staging environment #2', cost:180, usage:'zombie90' },
+    { name:'Unused SaaS seat (design tool)', cost:45, usage:'zombie90' },
+    { name:'Legacy monitoring tool', cost:120, usage:'watch30' },
+    { name:'Forgotten higher API tier', cost:300, usage:'zombie90' },
+    { name:'Primary database', cost:220, usage:'active' },
+  ];
+
+  let rows = [];
+  let idCounter = 0;
+
+  function addRow(data){
+    const id = idCounter++;
+    rows.push({ id, name: data?.name || '', cost: data?.cost ?? '', usage: data?.usage || 'active' });
+    renderRows();
+  }
+
+  function removeRow(id){
+    rows = rows.filter(r => r.id !== id);
+    renderRows();
+  }
+
+  function renderRows(){
+    rowsEl.innerHTML = rows.map(row => {
+      const opt = USAGE_OPTIONS.find(o => o.v === row.usage) || USAGE_OPTIONS[0];
+      return (
+        '<tr data-id="' + row.id + '">' +
+          '<td><input type="text" class="name" placeholder="Service name" value="' + escapeAttr(row.name) + '"></td>' +
+          '<td><input type="number" class="cost" placeholder="0" value="' + row.cost + '"></td>' +
+          '<td><select class="usage">' +
+            USAGE_OPTIONS.map(o => '<option value="' + o.v + '"' + (o.v === row.usage ? ' selected' : '') + '>' + o.label + '</option>').join('') +
+          '</select></td>' +
+          '<td><span class="status-pill ' + opt.status + '">' + opt.status + '</span></td>' +
+          '<td><button class="remove" title="remove">&times;</button></td>' +
+        '</tr>'
+      );
+    }).join('');
+
+    rowsEl.querySelectorAll('tr').forEach(tr => {
+      const id = parseInt(tr.dataset.id);
+      tr.querySelector('.name').addEventListener('input', e => updateRow(id, 'name', e.target.value));
+      tr.querySelector('.cost').addEventListener('input', e => updateRow(id, 'cost', e.target.value));
+      tr.querySelector('.usage').addEventListener('change', e => updateRow(id, 'usage', e.target.value));
+      tr.querySelector('.remove').addEventListener('click', () => removeRow(id));
+    });
+
+    renderStats();
+  }
+
+  function updateRow(id, field, value){
+    const row = rows.find(r => r.id === id);
+    if (!row) return;
+    row[field] = field === 'cost' ? parseFloat(value) || 0 : value;
+    renderStats();
+    // re-render just the status pill without losing focus
+    const opt = USAGE_OPTIONS.find(o => o.v === row.usage) || USAGE_OPTIONS[0];
+    const tr = rowsEl.querySelector('tr[data-id="' + id + '"]');
+    if (tr){
+      const pill = tr.querySelector('.status-pill');
+      pill.className = 'status-pill ' + opt.status;
+      pill.textContent = opt.status;
+    }
+  }
+
+  function renderStats(){
+    const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+    const total = rows.reduce((s, r) => s + (parseFloat(r.cost) || 0), 0);
+    const zombieTotal = rows
+      .filter(r => r.usage === 'zombie90')
+      .reduce((s, r) => s + (parseFloat(r.cost) || 0), 0);
+
+    statTotal.textContent = fmt(total);
+    statZombie.textContent = fmt(zombieTotal);
+    statAnnual.textContent = fmt(zombieTotal * 12);
+  }
+
+  function escapeAttr(str){
+    return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  document.getElementById('addBtn').addEventListener('click', () => addRow());
+  document.getElementById('seedBtn').addEventListener('click', () => {
+    rows = [];
+    idCounter = 0;
+    SEED.forEach(s => addRow(s));
+  });
+
+  addRow();
+
+  try {
+    fetch('https://systems-bench-analytics.iggy-mw.workers.dev/beacon', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ tool: 'zombie-stack', event: 'view' })
+    }).catch(()=>{});
+  } catch(e){}
+})();
+</script>
+
+</body>
+</html>
