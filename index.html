@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>systems-bench — tools for AI systems practitioners</title>
+<meta name="description" content="A workbench of static tools for AI systems practitioners: diagnostics, calculators, and generators, racked and ready.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@500;700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1b2025;
+    --bg-raised:#242b31;
+    --bg-card:#20262b;
+    --grid-line:#313a41;
+    --text:#e9edf1;
+    --text-mute:#8d99a3;
+    --accent-tag:#ff8a3d;
+    --accent-tag-dim:#7a4c2c;
+    --accent-signal:#5eead4;
+    --accent-warn:#ffc857;
+    --accent-off:#6b7680;
+    --radius:2px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0/40px 40px,
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:inherit;}
+
+  ::selection{background:var(--accent-tag); color:#1b2025;}
+
+  .mono{font-family:'IBM Plex Mono', monospace;}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:22px clamp(20px, 5vw, 56px);
+    border-bottom:1px solid var(--grid-line);
+    background:rgba(27,32,37,0.85);
+    backdrop-filter:blur(6px);
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+  .nameplate{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    font-family:'Big Shoulders', sans-serif;
+    font-weight:900;
+    font-size:22px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+  .nameplate .underscore{color:var(--accent-tag);}
+  header .repo-link{
+    font-size:12px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-mute);
+    text-decoration:none;
+    border:1px solid var(--grid-line);
+    padding:8px 14px;
+    border-radius:var(--radius);
+    transition:border-color .15s ease, color .15s ease;
+  }
+  header .repo-link:hover{border-color:var(--accent-signal); color:var(--accent-signal);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    padding:72px clamp(20px, 5vw, 56px) 48px;
+    overflow:hidden;
+    border-bottom:1px solid var(--grid-line);
+  }
+  .hero svg.circuit{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    opacity:0.35;
+    pointer-events:none;
+  }
+  .hero-inner{position:relative; max-width:760px;}
+
+  .power-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .led{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--accent-off);
+    box-shadow:0 0 0 rgba(0,0,0,0);
+    animation:powerOn 1.8s ease-out forwards;
+  }
+  @keyframes powerOn{
+    0%{background:var(--accent-off); box-shadow:none;}
+    40%{background:var(--accent-warn); box-shadow:0 0 8px var(--accent-warn);}
+    100%{background:var(--accent-signal); box-shadow:0 0 10px var(--accent-signal);}
+  }
+  .power-row span{
+    font-size:11px;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    color:var(--text-mute);
+  }
+
+  h1{
+    font-family:'Big Shoulders', sans-serif;
+    font-weight:900;
+    font-size:clamp(38px, 6vw, 64px);
+    line-height:0.98;
+    letter-spacing:0.2px;
+    margin:0 0 20px;
+    text-transform:uppercase;
+  }
+  h1 em{
+    font-style:normal;
+    color:var(--accent-tag);
+  }
+  .hero p{
+    font-size:16px;
+    line-height:1.6;
+    color:var(--text-mute);
+    max-width:56ch;
+    margin:0;
+  }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:28px;
+    align-items:flex-end;
+    padding:28px clamp(20px, 5vw, 56px);
+    border-bottom:1px solid var(--grid-line);
+  }
+  .control-group{display:flex; flex-direction:column; gap:8px;}
+  .control-group .label{
+    font-size:10px;
+    letter-spacing:0.15em;
+    text-transform:uppercase;
+    color:var(--text-mute);
+  }
+  .switches{display:flex; flex-wrap:wrap; gap:6px;}
+  .switch{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.03em;
+    padding:7px 12px;
+    background:var(--bg-raised);
+    border:1px solid var(--grid-line);
+    border-radius:var(--radius);
+    color:var(--text-mute);
+    cursor:pointer;
+    transition:all .12s ease;
+    user-select:none;
+  }
+  .switch:hover{border-color:var(--text-mute); color:var(--text);}
+  .switch.active{
+    background:var(--accent-tag);
+    border-color:var(--accent-tag);
+    color:#1b2025;
+    font-weight:500;
+  }
+  .switch.active[data-status="beta"]{background:var(--accent-warn); border-color:var(--accent-warn);}
+  .switch.active[data-status="archived"]{background:var(--accent-off); border-color:var(--accent-off);}
+  .switch.active[data-status="live"]{background:var(--accent-signal); border-color:var(--accent-signal);}
+
+  .count{
+    margin-left:auto;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--text-mute);
+    align-self:center;
+  }
+  .count b{color:var(--text);}
+
+  /* ---------- Grid ---------- */
+  main{padding:40px clamp(20px, 5vw, 56px) 80px;}
+  .pegboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:18px;
+  }
+
+  .card{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    background:var(--bg-card);
+    border:1px solid var(--grid-line);
+    border-radius:var(--radius);
+    padding:20px 20px 16px;
+    text-decoration:none;
+    color:var(--text);
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    border-color:var(--accent-tag-dim);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .card::before{
+    /* peg holes */
+    content:"";
+    position:absolute;
+    top:9px; left:9px;
+    width:5px; height:5px;
+    border-radius:50%;
+    background:var(--bg);
+    box-shadow:
+      calc(100% - 5px) 0 0 var(--bg),
+      0 calc(100% - 5px + 262px) 0 var(--bg);
+    display:none;
+  }
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:14px;
+  }
+  .card-id{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.1em;
+    color:var(--text-mute);
+  }
+  .status-dot{
+    width:8px; height:8px; border-radius:50%;
+    flex-shrink:0;
+    margin-top:2px;
+  }
+  .status-dot[data-status="live"]{background:var(--accent-signal); box-shadow:0 0 6px var(--accent-signal);}
+  .status-dot[data-status="beta"]{background:var(--accent-warn); box-shadow:0 0 6px var(--accent-warn);}
+  .status-dot[data-status="archived"]{background:var(--accent-off);}
+
+  .card h3{
+    font-family:'Big Shoulders', sans-serif;
+    font-weight:700;
+    font-size:22px;
+    text-transform:uppercase;
+    letter-spacing:0.2px;
+    margin:0 0 8px;
+    line-height:1.05;
+  }
+  .card p{
+    font-size:13.5px;
+    line-height:1.55;
+    color:var(--text-mute);
+    margin:0 0 16px;
+    flex-grow:1;
+  }
+  .card-tags{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:14px;
+  }
+  .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    padding:3px 8px;
+    border:1px solid var(--grid-line);
+    border-radius:var(--radius);
+    color:var(--text-mute);
+    text-transform:lowercase;
+  }
+  .card-foot{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding-top:12px;
+    border-top:1px solid var(--grid-line);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    color:var(--text-mute);
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+  }
+  .card-foot .open{color:var(--accent-tag);}
+
+  /* ---------- Empty / loading states ---------- */
+  .empty-slot{
+    grid-column:1 / -1;
+    text-align:center;
+    padding:60px 20px;
+    color:var(--text-mute);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    border:1px dashed var(--grid-line);
+    border-radius:var(--radius);
+  }
+
+  footer{
+    padding:28px clamp(20px, 5vw, 56px);
+    border-top:1px solid var(--grid-line);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--text-mute);
+  }
+  footer a{text-decoration:none; color:var(--text-mute);}
+  footer a:hover{color:var(--accent-signal);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+
+  @media (max-width:560px){
+    .hero{padding-top:52px;}
+    .controls{gap:18px;}
+    .count{margin-left:0;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nameplate">SYSTEMS<span class="underscore">_</span>BENCH</div>
+  <a class="repo-link mono" href="https://github.com/aacareq/systems-bench" target="_blank" rel="noopener">repo ↗</a>
+</header>
+
+<section class="hero">
+  <svg class="circuit" viewBox="0 0 1200 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <g stroke="#5eead4" stroke-width="1" fill="none">
+      <path d="M0 60 H180 L220 100 H420 L460 60 H700"/>
+      <path d="M0 220 H120 L160 260 H360 V320 H600 L640 360 H900"/>
+      <path d="M1200 40 H1000 L960 80 H760 L720 40 H520"/>
+      <path d="M1200 300 H1040 L1000 260 H800 V180 H660"/>
+    </g>
+    <g fill="#ff8a3d">
+      <circle cx="180" cy="60" r="3"/>
+      <circle cx="460" cy="60" r="3"/>
+      <circle cx="360" cy="260" r="3"/>
+      <circle cx="640" cy="360" r="3"/>
+      <circle cx="760" cy="80" r="3"/>
+      <circle cx="800" cy="260" r="3"/>
+    </g>
+  </svg>
+  <div class="hero-inner">
+    <div class="power-row">
+      <div class="led"></div>
+      <span class="mono">bench online — tools racked and ready</span>
+    </div>
+    <h1>A workbench for <em>AI systems</em> practitioners</h1>
+    <p>Small, static, single-purpose tools — diagnostics, calculators, and generators built for people doing the applied work. No accounts, no dashboards. Pick a tool off the pegboard and use it.</p>
+  </div>
+</section>
+
+<section class="controls">
+  <div class="control-group">
+    <span class="label">Filter by tag</span>
+    <div class="switches" id="tagSwitches"></div>
+  </div>
+  <div class="control-group">
+    <span class="label">Filter by status</span>
+    <div class="switches" id="statusSwitches"></div>
+  </div>
+  <div class="count mono" id="count"></div>
+</section>
+
+<main>
+  <div class="pegboard" id="pegboard">
+    <div class="empty-slot">loading bench inventory…</div>
+  </div>
+</main>
+
+<footer>
+  <span>built solo, shipped in the open — <a href="https://github.com/aacareq" target="_blank" rel="noopener">@aacareq</a></span>
+  <span id="lastUpdated"></span>
+</footer>
+
+<script>
+(function(){
+  const pegboard = document.getElementById('pegboard');
+  const tagSwitches = document.getElementById('tagSwitches');
+  const statusSwitches = document.getElementById('statusSwitches');
+  const countEl = document.getElementById('count');
+  const lastUpdatedEl = document.getElementById('lastUpdated');
+
+  let apps = [];
+  let activeTag = 'all';
+  let activeStatus = 'all';
+
+  function render(){
+    const filtered = apps.filter(a => {
+      const tagOk = activeTag === 'all' || (a.tags || []).includes(activeTag);
+      const statusOk = activeStatus === 'all' || a.status === activeStatus;
+      return tagOk && statusOk;
+    });
+
+    countEl.innerHTML = '<b>' + filtered.length + '</b> / ' + apps.length + ' tools shown';
+
+    if (filtered.length === 0){
+      pegboard.innerHTML = '<div class="empty-slot">no tools match this filter — try another switch combo</div>';
+      return;
+    }
+
+    pegboard.innerHTML = filtered.map((a, i) => {
+      const id = (a.id || String(i+1)).toString().padStart(3, '0');
+      const tags = (a.tags || []).map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('');
+      const date = a.dateAdded ? formatDate(a.dateAdded) : '';
+      return (
+        '<a class="card" href="' + escapeAttr(a.url) + '" target="_blank" rel="noopener">' +
+          '<div class="card-top">' +
+            '<span class="card-id mono">#' + id + '</span>' +
+            '<span class="status-dot" data-status="' + escapeAttr(a.status || 'live') + '"></span>' +
+          '</div>' +
+          '<h3>' + escapeHtml(a.name) + '</h3>' +
+          '<p>' + escapeHtml(a.description || '') + '</p>' +
+          '<div class="card-tags">' + tags + '</div>' +
+          '<div class="card-foot">' +
+            '<span>' + date + '</span>' +
+            '<span class="open">open →</span>' +
+          '</div>' +
+        '</a>'
+      );
+    }).join('');
+  }
+
+  function formatDate(d){
+    try{
+      const dt = new Date(d + 'T00:00:00');
+      return dt.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'2-digit' });
+    }catch(e){ return d; }
+  }
+
+  function escapeHtml(str){
+    return String(str || '').replace(/[&<>"']/g, s => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[s]));
+  }
+  function escapeAttr(str){ return escapeHtml(str); }
+
+  function buildSwitches(container, values, activeGetter, setter, dataAttr){
+    container.innerHTML = '';
+    const allBtn = document.createElement('div');
+    allBtn.className = 'switch active';
+    allBtn.textContent = 'all';
+    allBtn.dataset.value = 'all';
+    container.appendChild(allBtn);
+
+    values.forEach(v => {
+      const btn = document.createElement('div');
+      btn.className = 'switch';
+      btn.textContent = v;
+      btn.dataset.value = v;
+      if (dataAttr) btn.setAttribute(dataAttr, v);
+      container.appendChild(btn);
+    });
+
+    container.querySelectorAll('.switch').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.switch').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setter(btn.dataset.value);
+        render();
+      });
+    });
+  }
+
+  function init(data){
+    apps = (data.apps || []).slice().sort((a,b) => (b.dateAdded||'').localeCompare(a.dateAdded||''));
+
+    const allTags = [...new Set(apps.flatMap(a => a.tags || []))].sort();
+    const allStatuses = [...new Set(apps.map(a => a.status).filter(Boolean))].sort();
+
+    buildSwitches(tagSwitches, allTags, () => activeTag, (v) => activeTag = v);
+    buildSwitches(statusSwitches, allStatuses, () => activeStatus, (v) => activeStatus = v, 'data-status');
+
+    if (data.lastUpdated){
+      lastUpdatedEl.textContent = 'inventory last updated ' + formatDate(data.lastUpdated);
+    }
+
+    render();
+  }
+
+  fetch('./apps.json')
+    .then(r => {
+      if (!r.ok) throw new Error('apps.json not found');
+      return r.json();
+    })
+    .then(init)
+    .catch(() => {
+      pegboard.innerHTML = '<div class="empty-slot">bench inventory not found — check that apps.json is deployed alongside index.html</div>';
+    });
+})();
+</script>
+
+</body>
+</html>
