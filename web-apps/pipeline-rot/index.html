@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Rot — data & ML pipeline decay score</title>
+<meta name="description" content="Score your pipeline against the patterns that precede silent failure, and see exactly where it's weakest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D0F;
+    --bg-raised:#15181B;
+    --bg-card:#111417;
+    --line:#242A2F;
+    --text:#EDEFF1;
+    --text-mute:#8B939A;
+    --accent:#E8573F;
+    --ok:#5EEAD4;
+    --warn:#FFC857;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'Inter', sans-serif; -webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  .mono{font-family:'DM Mono', monospace;}
+
+  header{display:flex; align-items:center; justify-content:space-between; padding:18px clamp(18px,4vw,48px); border-bottom:1px solid var(--line);}
+  .back{font-family:'DM Mono', monospace; font-size:12px; color:var(--text-mute); text-decoration:none;}
+  .back:hover{color:var(--accent);}
+  .tool-tag{font-family:'DM Mono', monospace; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-mute); border:1px solid var(--line); padding:5px 10px; border-radius:var(--radius);}
+
+  .diagnosis{padding:56px clamp(18px,4vw,48px) 32px; border-bottom:1px solid var(--line);}
+  .eyebrow{font-family:'DM Mono', monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:14px;}
+  h1{font-family:'Fraunces', serif; font-weight:600; font-size:clamp(28px,4vw,42px); line-height:1.1; margin:0 0 12px;}
+  .diagnosis p{color:var(--text-mute); max-width:60ch; line-height:1.6; margin:0; font-size:15px;}
+
+  main{padding:36px clamp(18px,4vw,48px) 80px; display:grid; grid-template-columns:1fr 320px; gap:32px;}
+  @media (max-width:900px){ main{grid-template-columns:1fr;} }
+
+  .checklist{display:flex; flex-direction:column; gap:2px;}
+  .item{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    margin-bottom:6px;
+  }
+  .item .txt{font-size:14px; line-height:1.4; max-width:60ch;}
+  .item .num{font-family:'DM Mono', monospace; color:var(--text-mute); font-size:11px; margin-right:10px;}
+  .toggle{display:flex; gap:4px; flex-shrink:0;}
+  .toggle button{
+    width:36px; height:30px;
+    border:1px solid var(--line);
+    background:var(--bg-raised);
+    color:var(--text-mute);
+    font-family:'DM Mono', monospace;
+    font-size:11px;
+    border-radius:var(--radius);
+    cursor:pointer;
+  }
+  .toggle button.active[data-v="0"]{background:var(--accent); border-color:var(--accent); color:#0B0D0F;}
+  .toggle button.active[data-v="1"]{background:var(--warn); border-color:var(--warn); color:#0B0D0F;}
+  .toggle button.active[data-v="2"]{background:var(--ok); border-color:var(--ok); color:#0B0D0F;}
+
+  .side{position:sticky; top:20px; align-self:start;}
+  .score-card{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+    text-align:center;
+    margin-bottom:18px;
+  }
+  .score-card .label{font-family:'DM Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-mute); margin-bottom:10px;}
+  .score-card .score{font-family:'Fraunces', serif; font-size:56px; font-weight:700; line-height:1;}
+  .score-card .tier{font-family:'DM Mono', monospace; font-size:13px; margin-top:8px; padding:6px 12px; border-radius:var(--radius); display:inline-block;}
+
+  .risk-card{
+    background:var(--bg-card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+  }
+  .risk-card h3{font-family:'DM Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-mute); margin:0 0 14px;}
+  .risk-item{font-size:13px; padding:10px 0; border-top:1px solid var(--line); color:var(--text-mute);}
+  .risk-item:first-child{border-top:none;}
+  .risk-item b{color:var(--text); display:block; font-weight:500; margin-bottom:2px;}
+
+  .paywall{margin-top:18px; padding:18px; border:1px dashed var(--line); border-radius:var(--radius);}
+  .paywall h3{font-family:'Fraunces', serif; font-size:16px; margin:0 0 6px;}
+  .paywall p{margin:0 0 14px; font-size:12.5px; color:var(--text-mute); line-height:1.5;}
+  .cta{background:var(--accent); color:#0B0D0F; font-family:'DM Mono', monospace; font-size:12px; font-weight:500; text-decoration:none; padding:11px 16px; border-radius:var(--radius); display:inline-block;}
+
+  footer{padding:20px clamp(18px,4vw,48px); border-top:1px solid var(--line); font-family:'DM Mono', monospace; font-size:11px; color:var(--text-mute); display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="back" href="../../index.html">&larr; systems-bench</a>
+  <span class="tool-tag">#002 · mlops</span>
+</header>
+
+<section class="diagnosis">
+  <div class="eyebrow mono">pipeline rot</div>
+  <h1>Every pipeline decays the same way. Yours is decaying somewhere.</h1>
+  <p>Score each item 0 (not in place), 1 (partial), or 2 (fully covered). The rot score isn't a grade — it's a map to the specific point where a failure would go unnoticed the longest.</p>
+</section>
+
+<main>
+  <div class="checklist" id="checklist"></div>
+
+  <div class="side">
+    <div class="score-card">
+      <div class="label">Rot score</div>
+      <div class="score" id="score">—</div>
+      <div class="tier mono" id="tier">unscored</div>
+    </div>
+
+    <div class="risk-card">
+      <h3>Highest-risk points</h3>
+      <div id="riskList"></div>
+    </div>
+
+    <div class="paywall">
+      <h3>Full remediation spec</h3>
+      <p>A prioritized fix order for your three weakest points, with the specific monitoring or check to add for each — handed to you as a spec, not a lecture.</p>
+      <a class="cta" href="https://buy.stripe.com/REPLACE_WITH_PAYMENT_LINK?src=pipeline-rot" target="_blank" rel="noopener">Unlock spec — $9</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>pipeline rot · a systems-bench tool</span>
+  <span>no data leaves your browser</span>
+</footer>
+
+<script>
+(function(){
+  const ITEMS = [
+    { id:'schema', txt:'Schema drift is detected automatically, not discovered downstream.' },
+    { id:'freshness', txt:'Data freshness is checked on a schedule, with an alert if a source goes stale.' },
+    { id:'alerting', txt:'A silent failure (job succeeds, output is wrong) would trigger an alert, not just a crash.' },
+    { id:'tests', txt:'Transform logic has test coverage that runs on every change.' },
+    { id:'ownership', txt:'A specific person or team owns this pipeline and would be paged if it broke.' },
+    { id:'deps', txt:'Upstream dependency versions are pinned and deprecations are tracked.' },
+    { id:'retry', txt:'Transient failures retry with backoff instead of silently dropping data.' },
+    { id:'logging', txt:'Logs are complete enough to reconstruct what happened after the fact.' },
+    { id:'rollback', txt:'A bad deploy or bad data load can be rolled back without a manual scramble.' },
+    { id:'validation', txt:'Data is validated at ingestion, not just trusted from the source.' },
+    { id:'docs', txt:'Documentation reflects the pipeline as it actually runs today.' },
+    { id:'loadtest', txt:'The pipeline has been tested at realistic peak load in the last 6 months.' },
+  ];
+
+  const checklist = document.getElementById('checklist');
+  const scoreEl = document.getElementById('score');
+  const tierEl = document.getElementById('tier');
+  const riskList = document.getElementById('riskList');
+
+  const state = {};
+
+  checklist.innerHTML = ITEMS.map((item, i) => (
+    '<div class="item" data-id="' + item.id + '">' +
+      '<div class="txt"><span class="num mono">' + String(i+1).padStart(2,'0') + '</span>' + item.txt + '</div>' +
+      '<div class="toggle">' +
+        '<button data-v="0" title="not in place">0</button>' +
+        '<button data-v="1" title="partial">1</button>' +
+        '<button data-v="2" title="fully covered">2</button>' +
+      '</div>' +
+    '</div>'
+  )).join('');
+
+  checklist.querySelectorAll('.item').forEach(itemEl => {
+    const id = itemEl.dataset.id;
+    itemEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state[id] = parseInt(btn.dataset.v);
+        itemEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        render();
+      });
+    });
+  });
+
+  function render(){
+    const answered = Object.keys(state).length;
+    if (answered === 0){
+      scoreEl.textContent = '—';
+      tierEl.textContent = 'unscored';
+      tierEl.style.background = 'var(--bg-raised)';
+      tierEl.style.color = 'var(--text-mute)';
+      riskList.innerHTML = '<div class="risk-item" style="color:var(--text-mute)">Score at least a few items to see risk points.</div>';
+      return;
+    }
+
+    const total = ITEMS.reduce((sum, item) => sum + (state[item.id] ?? 0), 0);
+    const max = ITEMS.length * 2;
+    const pct = Math.round((total / max) * 100);
+    scoreEl.textContent = pct;
+
+    let tier, color;
+    if (pct >= 80){ tier = 'low risk'; color = 'var(--ok)'; }
+    else if (pct >= 55){ tier = 'medium risk'; color = 'var(--warn)'; }
+    else if (pct >= 30){ tier = 'high risk'; color = 'var(--accent)'; }
+    else { tier = 'critical risk'; color = 'var(--accent)'; }
+
+    tierEl.textContent = tier;
+    tierEl.style.background = color;
+    tierEl.style.color = '#0B0D0F';
+
+    const ranked = ITEMS
+      .map(item => ({ ...item, v: state[item.id] ?? 0 }))
+      .sort((a,b) => a.v - b.v)
+      .slice(0, 3);
+
+    riskList.innerHTML = ranked.map(item => (
+      '<div class="risk-item"><b>' + item.txt.split(',')[0].split('.')[0] + '</b>scored ' + item.v + '/2</div>'
+    )).join('');
+  }
+
+  render();
+
+  try {
+    fetch('https://systems-bench-analytics.iggy-mw.workers.dev/beacon', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ tool: 'pipeline-rot', event: 'view' })
+    }).catch(()=>{});
+  } catch(e){}
+})();
+</script>
+
+</body>
+</html>
