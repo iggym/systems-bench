@@ -27,6 +27,15 @@
       "tags": ["diagnostic", "cost"],
       "status": "live",
       "dateAdded": "2026-07-30"
-    }
+    },
+    {
+  "id": "ai-infra-router",
+  "name": "AI Infra Router & SOW Generator",
+  "url": "web-apps/ai-infra-router/index.html",
+  "description": "Deterministic decision engine to optimize MLOps routing, estimate GPU vs API costs, and scrub PII client-side.",
+  "tags": ["mlops", "architecture", "calculator"],
+  "status": "live",
+  "dateAdded": "2026-07-30"
+  }
   ]
 }
