@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compression Ratio Benchmarker — systems-bench</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
+    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
+    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
+  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
+  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
+  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
+  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
+  textarea { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; resize: none; line-height: 1.5; min-height: 180px; }
+  textarea:focus { border-color: var(--accent-tag); }
+  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
+  button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
+  button:hover { border-color: var(--accent-tag); color: var(--accent-signal); }
+</style>
+</head>
+<body>
+<header>
+  <h1 class="title">Compression Ratio Benchmarker</h1>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-header">Raw Text Payload</div>
+    <div class="panel-body">
+      <label>Source Context String</label>
+      <textarea id="sourceInput" spellcheck="false">Distributed systems architecture requires careful consideration of CAP theorem trade-offs. When designing multi-region database clusters with active-active replication, latency overhead and network partitioning resilience must be balanced against consistency guarantees. In synchronous replication models, write operations block until all follower nodes acknowledge commit logs, ensuring strong linearizability but severely increasing P99 latency during cross-continental transit.</textarea>
+      <button onclick="analyzeCompression()">Evaluate Compression Algorithms</button>
+    </div>
+  </div>
+  <div class="panel" style="border-right: none;">
+    <div class="panel-header">
+      <span>Compression Audit Report</span>
+      <span id="statusBadge" style="color:var(--accent-signal)">READY</span>
+    </div>
+    <div class="panel-body">
+      <label>Metrics & Ratio Manifest</label>
+      <pre id="outputReport">Click 'Evaluate Compression Algorithms' to run benchmark.</pre>
+    </div>
+  </div>
+</main>
+<script>
+  const sourceInput = document.getElementById('sourceInput');
+  const outputReport = document.getElementById('outputReport');
+  const statusBadge = document.getElementById('statusBadge');
+
+  function analyzeCompression() {
+    const text = sourceInput.value;
+    const rawLength = text.length;
+    const rawTokens = Math.ceil(rawLength / 4);
+
+    // Deterministic mock calculations for different text reduction algorithms
+    const semanticSummaryLength = Math.floor(rawLength * 0.35);
+    const entityExtractionLength = Math.floor(rawLength * 0.20);
+    const gzipEquivalentLength = Math.floor(rawLength * 0.65);
+
+    outputReport.textContent = JSON.stringify({
+      raw_metrics: {
+        character_count: rawLength,
+        approx_token_count: rawTokens
+      },
+      algorithms: {
+        lossless_gzip: {
+          compressed_chars: gzipEquivalentLength,
+          compression_ratio: `${((1 - (gzipEquivalentLength / rawLength)) * 100).toFixed(1)}% reduction`,
+          retention_fidelity: "100% (Lossless)"
+        },
+        semantic_summarization: {
+          compressed_chars: semanticSummaryLength,
+          approx_tokens: Math.ceil(semanticSummaryLength / 4),
+          compression_ratio: `${((1 - (semanticSummaryLength / rawLength)) * 100).toFixed(1)}% reduction`,
+          retention_fidelity: "85% (Key Argument Preserved)"
+        },
+        structured_entity_extraction: {
+          compressed_chars: entityExtractionLength,
+          approx_tokens: Math.ceil(entityExtractionLength / 4),
+          compression_ratio: `${((1 - (entityExtractionLength / rawLength)) * 100).toFixed(1)}% reduction`,
+          retention_fidelity: "92% (Facts & Variables Only)"
+        }
+      }
+    }, null, 2);
+
+    statusBadge.textContent = "COMPLETED";
+  }
+</script>
+</body>
+</html>
