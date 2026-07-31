@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HITL Gatekeeper — systems-bench</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
+    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
+    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --accent-err: #ff5e5e; --radius: 4px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
+  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
+  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
+  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
+  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
+  select, textarea { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; }
+  select:focus, textarea:focus { border-color: var(--accent-tag); }
+  textarea { flex: 1; resize: none; line-height: 1.5; }
+  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
+  .btn-group { display: flex; gap: 12px; }
+  button { flex: 1; background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
+  button:hover { border-color: var(--accent-tag); }
+  button.approve { color: var(--accent-signal); border-color: var(--accent-signal); }
+  button.reject { color: var(--accent-err); border-color: var(--accent-err); }
+</style>
+</head>
+<body>
+<header>
+  <h1 class="title">HITL Gatekeeper Dashboard</h1>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-header">Intercepted Tool Payload</div>
+    <div class="panel-body">
+      <div>
+        <label>Risk Classification Level</label>
+        <select id="riskLevel">
+          <option value="critical">Critical (Destructive Write / Financial)</option>
+          <option value="moderate">Moderate (External API Mutation)</option>
+          <option value="low">Low (Read-Only Query)</option>
+        </select>
+      </div>
+      <label>Raw Execution Arguments JSON</label>
+      <textarea id="payloadInput" spellcheck="false">{
+  "action": "DROP TABLE users_production;",
+  "target_cluster": "aws-us-east-1-primary",
+  "bypass_safety_checks": true
+}</textarea>
+    </div>
+  </div>
+  <div class="panel" style="border-right: none;">
+    <div class="panel-header">
+      <span>Authorization & Audit Log</span>
+      <span id="statusBadge" style="color:var(--accent-tag)">PENDING REVIEW</span>
+    </div>
+    <div class="panel-body">
+      <label>Policy Evaluation Report</label>
+      <pre id="policyReport"></pre>
+      <div class="btn-group">
+        <button class="approve" onclick="resolveAction('APPROVED')">Authorize Execution</button>
+        <button class="reject" onclick="resolveAction('REJECTED')">Abort & Kill Agent</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+  const riskLevel = document.getElementById('riskLevel');
+  const payloadInput = document.getElementById('payloadInput');
+  const policyReport = document.getElementById('policyReport');
+  const statusBadge = document.getElementById('statusBadge');
+
+  function evaluatePolicy() {
+    try {
+      const parsed = JSON.parse(payloadInput.value);
+      const risk = riskLevel.value;
+      
+      let verdict = "MANUAL_INTERVENTION_REQUIRED";
+      if (risk === 'low') verdict = "AUTO_APPROVED";
+
+      policyReport.textContent = JSON.stringify({
+        evaluated_at: new Date().toISOString(),
+        risk_tier: risk.toUpperCase(),
+        policy_rule: risk === 'critical' ? "Rule 409: Prohibited destructive database schema mutation without secondary admin signature." : "Standard policy pass.",
+        gate_verdict: verdict,
+        payload_keys: Object.keys(parsed)
+      }, null, 2);
+    } catch (e) {
+      policyReport.textContent = "Error: Invalid JSON payload structure.";
+    }
+  }
+
+  function resolveAction(status) {
+    statusBadge.textContent = status;
+    statusBadge.style.color = status === 'APPROVED' ? 'var(--accent-signal)' : 'var(--accent-err)';
+  }
+
+  riskLevel.addEventListener('change', evaluatePolicy);
+  payloadInput.addEventListener('input', evaluatePolicy);
+  evaluatePolicy();
+</script>
+</body>
+</html>
