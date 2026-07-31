@@ -3,90 +3,215 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Needle Haystack Benchmarker — systems-bench</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Needle in a Haystack Benchmarker</title>
 <style>
-  :root {
-    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
-    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
-    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
-  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
-  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
-  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); }
-  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
-  input, textarea { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; }
-  input:focus, textarea:focus { border-color: var(--accent-tag); }
-  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input,select{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem;resize:vertical}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:420px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-live{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-local{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
-<header>
-  <h1 class="title">Needle Haystack Benchmarker</h1>
-</header>
-<main>
-  <div class="panel">
-    <div class="panel-header">Test Parameters</div>
-    <div class="panel-body">
-      <div>
-        <label>Needle Statement (Target Fact)</label>
-        <input type="text" id="needleInput" value="The secret system passcode is 7749-DELTA." />
-      </div>
-      <div>
-        <label>Haystack Depth Position (%)</label>
-        <input type="number" id="depthInput" value="50" min="0" max="100" />
-      </div>
-      <div>
-        <label>Context Length (Tokens)</label>
-        <input type="number" id="lengthInput" value="32000" />
-      </div>
+<h1>Needle in a Haystack Benchmarker</h1>
+<p class="sub"><span class="badge b-live">LIVE</span> runs a real retrieval sweep: the needle is embedded at each context depth, the model must find it, and you get a recall curve. <span class="badge b-local">LOCAL</span> (no key) does honest harness preparation only.</p>
+<div class="grid">
+  <div class="card">
+    <label>Needle fact (must be unique in the corpus)</label>
+    <input id="needle" value="The secret system passcode is 7749-DELTA.">
+    <label>Question to ask (keep it unambiguous)</label>
+    <input id="question" value="What is the secret system passcode?">
+    <label>Answer phrase to match</label>
+    <input id="answer" value="7749-DELTA">
+    <label>Context length (tokens)</label>
+    <input id="ctxLength" value="16000">
+    <label>Depth positions to sweep (%, comma-separated)</label>
+    <input id="depths" value="5,25,50,75,95">
+    <label>Rounds per depth</label>
+    <input id="rounds" value="2">
+    <label>Filler corpus (optional — default: generated tech prose; else paste your own text)</label>
+    <textarea id="corpus" rows="6" spellcheck="false"></textarea>
+    <label>Gemini API key (optional — unlocks the live sweep)</label>
+    <input type="password" id="geminiKey" placeholder="AIza...">
+    <div style="display:flex;gap:10px">
+      <button style="flex:1" class="sec" onclick="prep()">Prepare Harness (local)</button>
+      <button style="flex:1" onclick="sweep()">Run Retrieval Sweep (live)</button>
     </div>
   </div>
-  <div class="panel" style="border-right: none;">
-    <div class="panel-header">Retrieval Verification Harness</div>
-    <div class="panel-body">
-      <label>Generated Injection Manifest</label>
-      <pre id="outputManifest"></pre>
-      <label>Recall Probability Score</label>
-      <pre id="outputScore"></pre>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Results</span>
+      <span id="statusBadge" class="badge b-local">IDLE</span>
     </div>
+    <pre id="output">Set needle/question/context, then prepare locally or run the live sweep.</pre>
   </div>
-</main>
+</div>
 <script>
-  const needleInput = document.getElementById('needleInput');
-  const depthInput = document.getElementById('depthInput');
-  const lengthInput = document.getElementById('lengthInput');
-  const outputManifest = document.getElementById('outputManifest');
-  const outputScore = document.getElementById('outputScore');
+const estTok = s => Math.ceil((s||'').trim().split(/\s+/).filter(Boolean).length * 1.33);
+const rand = (seed) => { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 
-  function evaluate() {
-    const needle = needleInput.value;
-    const depth = parseFloat(depthInput.value) || 0;
-    const length = parseInt(lengthInput.value) || 0;
+const SENTENCES = [
+  "Distributed systems engineering balances consistency, availability, and partition tolerance.",
+  "Caching at the edge reduces origin load and time-to-first-byte for global users.",
+  "Vector databases index embeddings to enable semantic search over unstructured text.",
+  "Batching token requests amortizes overhead and increases effective throughput.",
+  "Observability pipelines ship traces, metrics, and logs to a central sink for triage.",
+  "Rate limiting protects shared inference endpoints from thundering-herd failures.",
+  "Retrieval-augmented generation grounds model answers in source documents.",
+  "Streaming responses cut perceived latency by rendering tokens as they arrive.",
+  "Prompt compression trades context fidelity for token efficiency under budget.",
+  "A/B test evaluation judges before deploying prompt changes to production.",
+  "Backpressure propagates load signals upstream so workers shed work gracefully.",
+  "Checkpointing agent state enables resume after crashes without losing progress.",
+  "Human-in-the-loop gates catch destructive tool calls before they execute.",
+  "Feature stores decouple training-time and serving-time feature computation.",
+  "Canary deployments shift a small traffic slice to validate a new model version.",
+  "Eviction policies in KV caches bound memory growth on long-running sessions.",
+  "Idempotent retries make at-least-once delivery safe for billing systems.",
+  "Shadow traffic replays production requests against candidate models offline.",
+  "Synthetic data augmentation stretches small labeled sets for fine-tuning.",
+  "Token budgeting decides what to keep, summarize, or drop from context."
+];
 
-    outputManifest.textContent = JSON.stringify({
-      target_needle: needle,
-      injection_depth_pct: depth,
-      context_window_tokens: length,
-      approx_character_offset: Math.floor((length * 4) * (depth / 100))
-    }, null, 2);
-
-    let score = "100% (High Confidence Retrieval)";
-    if (depth > 85 && length > 64000) score = "42% (Recency Bias / Lost in the Middle Risk)";
-    else if (length > 128000) score = "78% (Attention Degradation Detected)";
-
-    outputScore.textContent = `Predicted Recall Accuracy: ${score}\nRecommended Chunk Strategy: Hierarchical Parent-Child Indexing`;
+function buildFiller(targetChars) {
+  const r = rand(7);
+  const pool = [...SENTENCES];
+  let out = '';
+  while (out.length < targetChars) {
+    const i = Math.floor(r() * pool.length);
+    out += pool[i] + ' ';
   }
+  return out;
+}
 
-  needleInput.addEventListener('input', evaluate);
-  depthInput.addEventListener('input', evaluate);
-  lengthInput.addEventListener('input', evaluate);
-  evaluate();
+function getParams() {
+  const needle = document.getElementById('needle').value.trim();
+  const question = document.getElementById('question').value.trim();
+  const answer = document.getElementById('answer').value.trim();
+  const ctxLength = parseInt(document.getElementById('ctxLength').value) || 16000;
+  const depths = document.getElementById('depths').value.split(',').map(s => parseFloat(s)).filter(n => !isNaN(n) && n >= 0 && n <= 100);
+  const rounds = Math.max(1, parseInt(document.getElementById('rounds').value) || 1);
+  const corpus = document.getElementById('corpus').value.trim();
+  return { needle, question, answer, ctxLength, depths, rounds, corpus };
+}
+
+function prep() {
+  const statusEl = document.getElementById('statusBadge');
+  const out = document.getElementById('output');
+  try {
+    const p = getParams();
+    const base = p.corpus || buildFiller(p.ctxLength * 4);
+    const offsetChars = Math.floor((p.ctxLength * 4) * (0.5 / 100)); // sample at 50% for prep
+    const issues = [];
+    if (!p.needle) issues.push('needle is empty');
+    if (base.includes(p.needle)) issues.push('needle already appears in the corpus — results would be invalid');
+    const hayTokens = estTok(base);
+    if (hayTokens < p.ctxLength) issues.push(`generated/pasted corpus (~${hayTokens.toLocaleString()} tok) is smaller than target context (${p.ctxLength.toLocaleString()} tok) — sweep would be degenerate`);
+    statusEl.textContent = issues.length ? 'PREP ISSUES' : 'HARNESS READY';
+    statusEl.className = 'badge ' + (issues.length ? 'b-err' : 'b-ok');
+    out.textContent = JSON.stringify({
+      mode: 'LOCAL_PREP',
+      needle: p.needle, question: p.question, answer: p.answer,
+      context_tokens: p.ctxLength, depths: p.depths, rounds_per_depth: p.rounds,
+      corpus_tokens_estimated: hayTokens,
+      approximate_needle_offsets_chars: p.depths.map(d => Math.floor((p.ctxLength * 4) * (d / 100))),
+      issues,
+      note: 'Prep checks only. Paste a Gemini key and click "Run Retrieval Sweep" to get a real recall curve. Methodology: insert needle at each depth, ask the question, check whether the answer phrase appears in the reply.'
+    }, null, 2);
+  } catch (e) {
+    statusEl.textContent = 'ERROR'; statusEl.className = 'badge b-err';
+    out.textContent = 'Error: ' + e.message;
+  }
+}
+
+async function callGemini(prompt, model) {
+  const key = document.getElementById('geminiKey').value.trim();
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, maxOutputTokens: 40 } })
+  });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error('API ' + (e.error?.message || r.status)); }
+  const d = await r.json();
+  return (d.candidates?.[0]?.content?.parts?.[0]?.text) || '';
+}
+
+async function sweep() {
+  const statusEl = document.getElementById('statusBadge');
+  const out = document.getElementById('output');
+  const key = document.getElementById('geminiKey').value.trim();
+  if (!key) { statusEl.textContent = 'KEY REQUIRED'; statusEl.className = 'badge b-err'; out.textContent = 'The live sweep needs a Gemini API key (free tier fine). Without a key, use "Prepare Harness" — it refuses to fabricate recall numbers.'; return; }
+  const p = getParams();
+  if (!p.needle || !p.question || !p.answer) { statusEl.textContent = 'MISSING FIELDS'; statusEl.className = 'badge b-err'; out.textContent = 'Needle, question, and answer phrase are required.'; return; }
+  const base = p.corpus || buildFiller(p.ctxLength * 4);
+  statusEl.textContent = 'SWEEPING…'; statusEl.className = 'badge b-live';
+  out.textContent = `Running ${p.depths.length} depths × ${p.rounds} rounds = ${p.depths.length * p.rounds} model calls…`;
+  const results = [];
+  for (const depth of p.depths) {
+    for (let r = 0; r < p.rounds; r++) {
+      const targetChars = p.ctxLength * 4;
+      const insertAt = Math.floor(targetChars * (depth / 100));
+      const hay = base.slice(0, insertAt) + '\n\n' + p.needle + '\n\n' + base.slice(insertAt);
+      const t0 = performance.now();
+      try {
+        const reply = await callGemini('Read the text below, then answer the question. Be concise (max 10 words).\n\nTEXT:\n' + hay.slice(0, targetChars + 200) + '\n\nQUESTION: ' + p.question);
+        const hit = reply.includes(p.answer);
+        results.push({ depth, round: r, hit, latency: Math.round(performance.now() - t0), reply: reply.trim().slice(0, 120) });
+      } catch (e) {
+        results.push({ depth, round: r, hit: false, latency: 0, reply: 'ERROR: ' + e.message });
+      }
+      const done = results.length;
+      const need = p.depths.length * p.rounds;
+      out.textContent = `Running… ${done}/${need} (depth ${depth}%)`;
+    }
+  }
+  const byDepth = {};
+  results.forEach(res => {
+    (byDepth[res.depth] = byDepth[res.depth] || []).push(res);
+  });
+  const table = Object.entries(byDepth).sort((a, b) => a[0] - b[0]).map(([d, rs]) => {
+    const hits = rs.filter(r => r.hit).length;
+    const pct = Math.round((hits / rs.length) * 100);
+    return { depth: Number(d), pct, hits, n: rs.length };
+  });
+  const overall = Math.round((results.filter(r => r.hit).length / results.length) * 100);
+  const mid = table.filter(t => t.depth >= 25 && t.depth <= 75);
+  const edges = table.filter(t => t.depth < 25 || t.depth > 75);
+  const midAvg = mid.length ? mid.reduce((s, t) => s + t.pct, 0) / mid.length : 0;
+  const edgeAvg = edges.length ? edges.reduce((s, t) => s + t.pct, 0) / edges.length : 0;
+  const lostInMiddle = (edgeAvg - midAvg) >= 20 && mid.length > 0;
+
+  statusEl.textContent = overall + '% recall';
+  statusEl.className = 'badge ' + (overall >= 80 ? 'b-live' : overall >= 50 ? 'b-local' : 'b-err');
+  const bar = t => '█'.repeat(Math.round(t.pct / 5)).padEnd(20, '░') + ' ' + t.pct + '%';
+  out.textContent =
+`RETRIEVAL SWEEP (${p.ctxLength.toLocaleString()} tokens, ${results.length} calls, model gemini-2.5-flash)
+
+DEPTH RECALL CURVE
+${table.map(t => `depth ${String(t.depth).padStart(3)}%  ${bar(t)}`).join('\n')}
+
+overall recall : ${overall}%  (${results.filter(r => r.hit).length}/${results.length})
+middle (25-75): ${Math.round(midAvg)}% vs edges: ${Math.round(edgeAvg)}%
+diagnosis      : ${lostInMiddle ? 'LOST IN THE MIDDLE — middle-context retrieval degrades. Consider chunk re-ordering or recursion.' : 'no significant lost-in-the-middle effect at these depths'}
+
+PER-CALL LOG
+${results.map(r => `[${String(r.depth).padStart(3)}% r${r.round}] ${r.hit ? 'HIT ' : 'MISS'} ${r.latency}ms  "${r.reply}"`).join('\n')}`;
+}
 </script>
 </body>
 </html>
