@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReAct Loop Visualizer</title>
+  <style>
+    :root { --bg: #090d16; --card: #111827; --border: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
+    .step { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 14px; margin-bottom: 12px; border-radius: 6px; }
+    .tag { font-weight: bold; color: var(--accent); font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1 style="margin-bottom:16px;">ReAct Execution Trace Trace Tree</h1>
+  <div class="step"><span class="tag">THOUGHT 1:</span> User requested weather for Dallas and stock price for TSLA. Need to fetch weather first.</div>
+  <div class="step"><span class="tag">ACTION 1:</span> get_weather(location="Dallas, TX")</div>
+  <div class="step"><span class="tag">OBSERVATION 1:</span> {"temp": 82, "condition": "Clear"}</div>
+  <div class="step"><span class="tag">THOUGHT 2:</span> Weather fetched. Now querying TSLA stock quote.</div>
+  <div class="step"><span class="tag">ACTION 2:</span> get_stock_price(ticker="TSLA")</div>
+  <div class="step"><span class="tag">OBSERVATION 2:</span> {"price": 240.50, "currency": "USD"}</div>
+  <div class="step"><span class="tag">FINAL ANSWER:</span> The current temperature in Dallas is 82°F (Clear), and TSLA is trading at $240.50 USD.</div>
+</body>
+</html>
