@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latency & Cost Profiler — systems-bench</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
+    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
+    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
+  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
+  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
+  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); }
+  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
+  input, select { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; }
+  input:focus, select:focus { border-color: var(--accent-tag); }
+  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1 class="title">Latency & Cost Profiler</h1>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-header">Throughput Parameters</div>
+    <div class="panel-body">
+      <div>
+        <label>Model Provider Tier</label>
+        <select id="modelTier">
+          <option value="groq-70b">Groq Llama 3 70B (Ultra-Fast Edge)</option>
+          <option value="gemini-flash">Gemini 1.5 Flash (Balanced High-Volume)</option>
+          <option value="gemini-pro">Gemini 1.5 Pro (Deep Reasoning / Large Context)</option>
+        </select>
+      </div>
+      <div>
+        <label>Monthly Token Volume (Input + Output)</label>
+        <input type="number" id="tokenVolume" value="10000000" />
+      </div>
+      <div>
+        <label>Target P95 Latency Threshold (ms)</label>
+        <input type="number" id="latencyTarget" value="250" />
+      </div>
+    </div>
+  </div>
+  <div class="panel" style="border-right: none;">
+    <div class="panel-header">Financial & Performance Audit</div>
+    <div class="panel-body">
+      <label>Cost & Latency Breakdown Report</label>
+      <pre id="auditReport"></pre>
+    </div>
+  </div>
+</main>
+<script>
+  const modelTier = document.getElementById('modelTier');
+  const tokenVolume = document.getElementById('tokenVolume');
+  const latencyTarget = document.getElementById('latencyTarget');
+  const auditReport = document.getElementById('auditReport');
+
+  const pricingModels = {
+    'groq-70b': { inputRate: 0.70, outputRate: 0.80, ttft: 80, tps: 300 },
+    'gemini-flash': { inputRate: 0.075, outputRate: 0.30, ttft: 200, tps: 100 },
+    'gemini-pro': { inputRate: 1.25, outputRate: 5.00, ttft: 450, tps: 45 }
+  };
+
+  function calculateProfile() {
+    const tier = modelTier.value;
+    const vol = parseFloat(tokenVolume.value) || 0;
+    const target = parseFloat(latencyTarget.value) || 0;
+    const model = pricingModels[tier];
+
+    // Assuming 75% input, 25% output split
+    const inputTokens = vol * 0.75;
+    const outputTokens = vol * 0.25;
+
+    const monthlyCost = ((inputTokens / 1000000) * model.inputRate) + ((outputTokens / 1000000) * model.outputRate);
+
+    auditReport.textContent = JSON.stringify({
+      selected_model: tier,
+      monthly_token_volume: vol.toLocaleString(),
+      estimated_monthly_cost_usd: `$${monthlyCost.toFixed(2)}`,
+      performance_metrics: {
+        time_to_first_token_ttft_ms: model.ttft,
+        generation_speed_tokens_per_sec: model.tps,
+        p95_target_compliance: model.ttft <= target ? "PASS (Within SLA)" : "FAIL (Exceeds Latency Threshold)"
+      },
+      efficiency_rating: monthlyCost > 500 ? "HIGH EXPENDITURE - REVIEW CACHE STRATEGY" : "OPTIMAL"
+    }, null, 2);
+  }
+
+  modelTier.addEventListener('change', calculateProfile);
+  tokenVolume.addEventListener('input', calculateProfile);
+  latencyTarget.addEventListener('input', calculateProfile);
+  calculateProfile();
+</script>
+</body>
+</html>
