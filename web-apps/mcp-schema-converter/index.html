@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP Client Inspector — systems-bench</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
+    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
+    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
+  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
+  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
+  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
+  textarea { flex: 1; background: var(--bg); color: var(--text); border: none; padding: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; resize: none; outline: none; line-height: 1.5; }
+  #output { color: var(--accent-signal); background: var(--bg-raised); }
+  .status { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent-signal); }
+  .status.error { color: #ff5e5e; }
+</style>
+</head>
+<body>
+<header>
+  <h1 class="title">MCP Client Inspector</h1>
+</header>
+<main>
+  <div class="panel">
+    <div class="panel-header">Raw Tool Definition (Input)</div>
+    <textarea id="inputJSON" spellcheck="false">{
+  "name": "fetch_user_data",
+  "description": "Retrieves user profile information.",
+  "args": {
+    "user_id": { "type": "string", "description": "UUID of the user", "required": true },
+    "include_history": { "type": "boolean", "default": false }
+  }
+}</textarea>
+  </div>
+  <div class="panel" style="border-right: none;">
+    <div class="panel-header">
+      <span>OpenAI/Gemini Schema (Output)</span>
+      <span id="status" class="status">Compiled</span>
+    </div>
+    <textarea id="output" readonly></textarea>
+  </div>
+</main>
+<script>
+  const inputEl = document.getElementById('inputJSON');
+  const outputEl = document.getElementById('output');
+  const statusEl = document.getElementById('status');
+
+  function compileSchema() {
+    try {
+      const raw = JSON.parse(inputEl.value);
+      const schema = {
+        name: raw.name || "unnamed_tool",
+        description: raw.description || "",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: []
+        }
+      };
+
+      const args = raw.args || raw.parameters || {};
+      for (const [key, val] of Object.entries(args)) {
+        schema.parameters.properties[key] = {
+          type: val.type || "string",
+          description: val.description || ""
+        };
+        if (val.enum) schema.parameters.properties[key].enum = val.enum;
+        if (val.required === true || val.required === "true") {
+          schema.parameters.required.push(key);
+        }
+      }
+
+      if (schema.parameters.required.length === 0) {
+        delete schema.parameters.required;
+      }
+
+      outputEl.value = JSON.stringify(schema, null, 2);
+      statusEl.textContent = "Valid Schema";
+      statusEl.className = "status";
+    } catch (err) {
+      statusEl.textContent = "JSON Syntax Error";
+      statusEl.className = "status error";
+    }
+  }
+
+  inputEl.addEventListener('input', compileSchema);
+  compileSchema();
+</script>
+</body>
+</html>
