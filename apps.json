@@ -64,7 +64,15 @@
     "tags": ["agent", "proxy", "performance", "monetizable"],
     "status": "live",
     "dateAdded": "2026-07-31"
-  }
+  },{
+  "id": "ai-engineering-hub",
+  "name": "AI Engineering Tool Suite",
+  "url": "index.html",
+  "description": "Unified dashboard and registry showcasing 18 high-agency client-side web tools for context engineering, loops, harnesses, and evaluations.",
+  "tags": ["dashboard", "hub", "context-engineering", "harnesses", "evaluations"],
+  "status": "live",
+  "dateAdded": "2026-07-31"
+}
 
 
 
