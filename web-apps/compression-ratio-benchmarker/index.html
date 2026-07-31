@@ -3,97 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Compression Ratio Benchmarker — systems-bench</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Context Compression Benchmarker</title>
 <style>
-  :root {
-    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
-    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
-    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
-  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
-  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
-  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
-  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
-  textarea { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; resize: none; line-height: 1.5; min-height: 180px; }
-  textarea:focus { border-color: var(--accent-tag); }
-  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
-  button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
-  button:hover { border-color: var(--accent-tag); color: var(--accent-signal); }
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input,select{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem;resize:vertical}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:440px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-live{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-local{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
-<header>
-  <h1 class="title">Compression Ratio Benchmarker</h1>
-</header>
-<main>
-  <div class="panel">
-    <div class="panel-header">Raw Text Payload</div>
-    <div class="panel-body">
-      <label>Source Context String</label>
-      <textarea id="sourceInput" spellcheck="false">Distributed systems architecture requires careful consideration of CAP theorem trade-offs. When designing multi-region database clusters with active-active replication, latency overhead and network partitioning resilience must be balanced against consistency guarantees. In synchronous replication models, write operations block until all follower nodes acknowledge commit logs, ensuring strong linearizability but severely increasing P99 latency during cross-continental transit.</textarea>
-      <button onclick="analyzeCompression()">Evaluate Compression Algorithms</button>
+<h1>Context Compression Benchmarker</h1>
+<p class="sub">Actually compresses your text and measures the real ratio and content retention for each strategy. No canned percentages. gzip + token trimming + dedup run locally; LLM summarization is <span class="badge b-live">LIVE</span> (needs a Gemini key).</p>
+<div class="grid">
+  <div class="card">
+    <label>Source context (paste a system prompt, transcript, or doc)</label>
+    <textarea id="sourceInput" rows="12" spellcheck="false">Distributed systems architecture requires careful consideration of CAP theorem trade-offs. When designing multi-region database clusters with active-active replication, latency overhead and network partitioning resilience must be balanced against consistency guarantees. In synchronous replication models, write operations block until all follower nodes acknowledge commit logs, ensuring strong linearizability but severely increasing P99 latency during cross-continental transit. Asynchronous replication improves availability but risks stale reads and divergent histories. Modern consensus protocols like Raft elect a single leader to serialize writes, trading write availability for a simpler, more debuggable design. Sharding distributes partitions across nodes, and consistent hashing minimizes reshuffling when nodes join or leave the cluster. Reliable systems also plan for partial failure: timeouts, retries with exponential backoff, and circuit breakers prevent cascading outages. Observability — structured logs, distributed traces, and metrics — turns these failure modes into diagnosable events rather than silent corruption.</textarea>
+    <label>Target token budget (for the trim strategy, optional)</label>
+    <input id="targetTokens" value="150">
+    <label>Gemini API key (optional — enables the LLM summary row)</label>
+    <input type="password" id="geminiKey" placeholder="AIza...">
+    <div style="display:flex;gap:10px">
+      <button style="flex:1" onclick="runBench()">Run Local Benchmark</button>
+      <button style="flex:1" class="sec" onclick="runLive()">Run Local + LLM Summary</button>
     </div>
   </div>
-  <div class="panel" style="border-right: none;">
-    <div class="panel-header">
-      <span>Compression Audit Report</span>
-      <span id="statusBadge" style="color:var(--accent-signal)">READY</span>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Benchmark report</span>
+      <span id="statusBadge" class="badge b-local">READY</span>
     </div>
-    <div class="panel-body">
-      <label>Metrics & Ratio Manifest</label>
-      <pre id="outputReport">Click 'Evaluate Compression Algorithms' to run benchmark.</pre>
-    </div>
+    <pre id="output">Paste text and run a benchmark.</pre>
   </div>
-</main>
+</div>
 <script>
-  const sourceInput = document.getElementById('sourceInput');
-  const outputReport = document.getElementById('outputReport');
-  const statusBadge = document.getElementById('statusBadge');
+const estTok = s => Math.ceil((s||'').trim().split(/\s+/).filter(Boolean).length * 1.33);
+const words = s => new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean));
+// retention = fraction of original unique words still present in the compressed output (lexical coverage)
+function coverage(orig, comp) { const o = words(orig), c = words(comp); if (!o.size) return 100; let kept = 0; o.forEach(w => { if (c.has(w)) kept++; }); return (kept / o.size) * 100; }
 
-  function analyzeCompression() {
-    const text = sourceInput.value;
-    const rawLength = text.length;
-    const rawTokens = Math.ceil(rawLength / 4);
+async function gzipBytes(str) {
+  const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = await new Response(stream).arrayBuffer();
+  return buf.byteLength;
+}
 
-    // Deterministic mock calculations for different text reduction algorithms
-    const semanticSummaryLength = Math.floor(rawLength * 0.35);
-    const entityExtractionLength = Math.floor(rawLength * 0.20);
-    const gzipEquivalentLength = Math.floor(rawLength * 0.65);
-
-    outputReport.textContent = JSON.stringify({
-      raw_metrics: {
-        character_count: rawLength,
-        approx_token_count: rawTokens
-      },
-      algorithms: {
-        lossless_gzip: {
-          compressed_chars: gzipEquivalentLength,
-          compression_ratio: `${((1 - (gzipEquivalentLength / rawLength)) * 100).toFixed(1)}% reduction`,
-          retention_fidelity: "100% (Lossless)"
-        },
-        semantic_summarization: {
-          compressed_chars: semanticSummaryLength,
-          approx_tokens: Math.ceil(semanticSummaryLength / 4),
-          compression_ratio: `${((1 - (semanticSummaryLength / rawLength)) * 100).toFixed(1)}% reduction`,
-          retention_fidelity: "85% (Key Argument Preserved)"
-        },
-        structured_entity_extraction: {
-          compressed_chars: entityExtractionLength,
-          approx_tokens: Math.ceil(entityExtractionLength / 4),
-          compression_ratio: `${((1 - (entityExtractionLength / rawLength)) * 100).toFixed(1)}% reduction`,
-          retention_fidelity: "92% (Facts & Variables Only)"
-        }
-      }
-    }, null, 2);
-
-    statusBadge.textContent = "COMPLETED";
+function trimToTokens(text, target) {
+  const lines = text.split('\n').filter(l => l.trim());
+  let out = [], cur = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = estTok(lines[i]);
+    if (cur + t > target) break;
+    out.unshift(lines[i]); cur += t;
   }
+  return out.join('\n');
+}
+
+function dedupStrip(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const seen = new Set(); const kept = [];
+  for (const l of lines) {
+    const key = l.toLowerCase().replace(/[.,!?;:]+/g, '').trim();
+    if (!seen.has(key)) { seen.add(key); kept.push(l); }
+  }
+  const stop = new Set(['the','a','an','of','and','or','to','in','on','for','with','is','are','was','were','be','it','this','that','as','by','at','from']);
+  const keptWords = kept.join(' ').split(/\s+/).filter(w => !stop.has(w.toLowerCase())).join(' ');
+  return keptWords;
+}
+
+async function bench(text, target, liveSummary) {
+  const rawChars = text.length;
+  const rawBytes = new TextEncoder().encode(text).length;
+  const rawTokens = estTok(text);
+  const rows = [];
+  const gz = await gzipBytes(text);
+  rows.push({ algo: 'gzip (lossless)', out: gz + ' bytes', ratio: ((1 - gz / rawBytes) * 100).toFixed(1) + '%', retention: '100%', note: 'decompressible → reversible' });
+  const trimmed = trimToTokens(text, target);
+  rows.push({ algo: `keep-newest ≤${target} tok (lossy)`, out: estTok(trimmed) + ' tok', ratio: ((1 - estTok(trimmed) / rawTokens) * 100).toFixed(1) + '%', retention: coverage(text, trimmed).toFixed(1) + '%', note: 'drops oldest lines; newest-first retention' });
+  const dd = dedupStrip(text);
+  rows.push({ algo: 'dedup + stopword strip (lossy)', out: estTok(dd) + ' tok', ratio: ((1 - estTok(dd) / rawTokens) * 100).toFixed(1) + '%', retention: coverage(text, dd).toFixed(1) + '%', note: 'lexical coverage only — semantic drift possible' });
+  if (liveSummary) rows.push(liveSummary);
+  return { rawChars, rawBytes, rawTokens, rows };
+}
+
+function render(res, mode) {
+  const statusEl = document.getElementById('statusBadge');
+  const out = document.getElementById('output');
+  statusEl.textContent = mode;
+  statusEl.className = 'badge ' + (mode === 'LIVE' ? 'b-live' : 'b-local');
+  const rows = res.rows.map(r =>
+    `<tr><td>${r.algo}</td><td>${r.out}</td><td>${r.ratio}</td><td>${r.retention}</td><td>${r.note}</td></tr>`).join('');
+  out.innerHTML =
+`<p class="hint">input: ${res.rawChars.toLocaleString()} chars · ${res.rawBytes.toLocaleString()} bytes · ~${res.rawTokens.toLocaleString()} tokens</p>
+<table><tr><th>Strategy</th><th>Output size</th><th>Reduction</th><th>Content retention</th><th>Note</th></tr>${rows}</table>
+<p class="hint">Retention = fraction of original unique words still present. For lossy strategies this is a lexical floor — semantic fidelity can be lower (or, for good summaries, higher per token).</p>`;
+}
+
+async function runBench() {
+  const text = document.getElementById('sourceInput').value;
+  if (!text.trim()) { alert('Paste some text first.'); return; }
+  const target = parseInt(document.getElementById('targetTokens').value) || 150;
+  try { render(await bench(text, target, null), 'LOCAL'); }
+  catch (e) { document.getElementById('output').textContent = 'Error: ' + e.message; }
+}
+
+async function runLive() {
+  const text = document.getElementById('sourceInput').value;
+  if (!text.trim()) { alert('Paste some text first.'); return; }
+  const key = document.getElementById('geminiKey').value.trim();
+  if (!key) { runBench(); return; }
+  const target = parseInt(document.getElementById('targetTokens').value) || 150;
+  document.getElementById('statusBadge').textContent = 'SUMMARIZING…';
+  document.getElementById('statusBadge').className = 'badge b-live';
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(key), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: 'Summarize the following in at most ' + target + ' tokens, preserving key facts and numbers. Output only the summary.\n\n' + text.slice(0, 12000) }] }], generationConfig: { temperature: 0.3 } })
+    });
+    if (!r.ok) throw new Error('API ' + r.status);
+    const d = await r.json();
+    const summary = (d.candidates?.[0]?.content?.parts?.[0]?.text) || '';
+    const liveRow = { algo: 'LLM summary (lossy, live)', out: estTok(summary) + ' tok', ratio: ((1 - estTok(summary) / estTok(text)) * 100).toFixed(1) + '%', retention: coverage(text, summary).toFixed(1) + '%', note: 'semantic compression — lexical overlap underestimates retention' };
+    render(await bench(text, target, liveRow), 'LIVE');
+  } catch (e) {
+    document.getElementById('output').textContent = 'LLM summary failed (key valid? quota?): ' + e.message + '\n\nRunning local-only instead…';
+    render(await bench(text, target, null), 'LOCAL');
+  }
+}
 </script>
 </body>
 </html>
