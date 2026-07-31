@@ -2,36 +2,137 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Token Leakage Auditor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zombie Stack — idle service finder</title>
 <style>
-:root{--bg:#09090b;--surface:#121215;--border:#27272a;--text:#f4f4f5;--text-muted:#a1a1aa;--accent:#3b82f6;--font-sans:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;--font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-sans);padding:2rem 1rem;}
-.container{max-width:800px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;}
-h1{font-size:1.25rem;font-weight:600;margin-bottom:0.25rem;}
-p{color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem;}
-.form-group{margin-bottom:1rem;}
-label{display:block;font-size:0.75rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;}
-textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.6rem;border-radius:6px;font-family:var(--font-mono);font-size:0.8rem;min-height:90px;resize:vertical;}
-button{background:#1a1a1e;color:var(--text);border:1px solid var(--border);padding:0.6rem 1rem;border-radius:6px;font-size:0.85rem;cursor:pointer;width:100%;margin-top:0.5rem;}
-button:hover{border-color:var(--accent);}
-.output{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted);margin-top:1rem;white-space:pre-wrap;min-height:100px;}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+input,select{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+button.danger{background:var(--err)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.78rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.5px}
+tr.zombie td{background:rgba(248,81,73,.06)}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-z{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.b-a{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-w{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.stat{display:inline-block;background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.8rem;margin:4px 4px 0 0}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>Token Leakage Auditor</h1>
-<p>Scans system prompts and logs for unmasked PII, secret keys, or unbounded context leaks before API dispatch.</p>
-<div class="form-group"><label>Prompt / Payload to Audit</label><textarea id="input">You are an assistant. User: Jane Doe (jane@example.com), Key: sk-proj-1234567890abcdef.</textarea></div>
-<button onclick="runAudit()">Execute Leakage Audit</button>
-<div id="output" class="output">Ready for prompt inspection...</div>
+<h1>Zombie Stack</h1>
+<p class="sub">Flags subscriptions and services still running long after the workload that justified them is gone, and totals what they're costing you. Data stays in your browser (localStorage).</p>
+<div class="card" style="margin-bottom:16px">
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+    <div><label>Service / subscription</label><input id="svcName" placeholder="e.g. Legacy vector-db cluster, abandoned Slack bot"></div>
+    <div><label>Monthly cost ($)</label><input id="svcCost" type="number" value="50"></div>
+    <div><label>Last active date</label><input id="svcDate" type="date"></div>
+    <div><label>Owner (optional)</label><input id="svcOwner" placeholder="team"></div>
+    <button onclick="addSvc()">Add</button>
+  </div>
+  <div style="display:flex;gap:10px;align-items:end;margin-top:10px">
+    <div><label>Zombie threshold (days idle)</label><input id="threshold" type="number" value="90" style="width:120px" onchange="render()"></div>
+    <button class="sec" onclick="loadSample()">Load sample stack</button>
+    <button class="sec" onclick="exportCSV()">Export CSV</button>
+    <button class="danger" onclick="clearAll()">Clear all</button>
+  </div>
 </div>
+<div id="stats"></div>
+<div id="table"></div>
 <script>
-function runAudit() {
-    let val = document.getElementById('input').value;
-    let cleaned = val.replace(/sk-[a-zA-Z0-9-_]{10,}/g, "[REDACTED_API_KEY]").replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[REDACTED_EMAIL]");
-    document.getElementById('output').textContent = `[Token Audit] Scan complete. Masked sensitive vectors.\n\n--- SANITIZED ---\n${cleaned}`;
+const KEY = 'zombie-stack-v1';
+let svcs = [];
+try { svcs = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { svcs = []; }
+const daysBetween = (a, b) => Math.round((b - a) / 86400000);
+const money = n => '$' + Math.round(n).toLocaleString();
+
+function save() { try { localStorage.setItem(KEY, JSON.stringify(svcs)); } catch (e) {} }
+
+function addSvc() {
+  const name = document.getElementById('svcName').value.trim();
+  const cost = parseFloat(document.getElementById('svcCost').value) || 0;
+  const date = document.getElementById('svcDate').value;
+  const owner = document.getElementById('svcOwner').value.trim();
+  if (!name) { alert('Enter a service name.'); return; }
+  svcs.push({ id: Date.now(), name, cost, date: date || new Date().toISOString().slice(0, 10), owner });
+  save(); render();
+  document.getElementById('svcName').value = '';
 }
+
+function loadSample() {
+  const today = new Date();
+  const d = (daysAgo) => new Date(today - daysAgo * 86400000).toISOString().slice(0, 10);
+  svcs = [
+    { id: 1, name: 'Legacy GPU batch cluster', cost: 2400, date: d(320), owner: 'research' },
+    { id: 2, name: 'Unused CI runner fleet', cost: 380, date: d(210), owner: 'platform' },
+    { id: 3, name: 'Abandoned feature-flag service', cost: 120, date: d(140), owner: 'eng' },
+    { id: 4, name: 'Prod vector-db cluster', cost: 900, date: d(2), owner: 'ml' },
+    { id: 5, name: 'Staging eval sandbox', cost: 60, date: d(45), owner: 'ml' },
+    { id: 6, name: 'Old marketing site', cost: 25, date: d(400), owner: 'growth' },
+    { id: 7, name: 'Unused auth provider seat pack', cost: 150, date: d(100), owner: 'security' }
+  ];
+  save(); render();
+}
+
+function render() {
+  const threshold = parseInt(document.getElementById('threshold').value) || 90;
+  const today = new Date();
+  const rows = svcs.map(s => {
+    const daysIdle = daysBetween(new Date(s.date + 'T00:00:00'), today);
+    const zombie = daysIdle >= threshold;
+    const wastedMo = zombie ? (s.cost * (daysIdle / 30.44)) : 0;
+    const wastedYr = zombie ? s.cost * 12 : 0;
+    return { ...s, daysIdle, zombie, wastedMo, wastedYr };
+  }).sort((a, b) => b.wastedMo - a.wastedMo);
+  const totalMo = rows.reduce((s, r) => s + r.cost, 0);
+  const zombieRows = rows.filter(r => r.zombie);
+  const zombieMo = zombieRows.reduce((s, r) => s + r.wastedMo, 0);
+  const zombieYr = zombieRows.reduce((s, r) => s + r.wastedYr, 0);
+  document.getElementById('stats').innerHTML =
+    `<span class="stat">${svcs.length} services</span><span class="stat">${zombieRows.length} zombies (idle ≥ ${threshold}d)</span>` +
+    `<span class="stat">total ${money(totalMo)}/mo</span>` +
+    `<span class="stat" style="color:var(--err)">wasted ${money(zombieMo)}/mo → ${money(zombieYr)}/yr</span>`;
+  const rowsHtml = rows.map(r =>
+    `<tr class="${r.zombie ? 'zombie' : ''}">
+      <td>${r.name}${r.owner ? ' <span class="hint">· ' + r.owner + '</span>' : ''}</td>
+      <td>${money(r.cost)}</td>
+      <td>${r.date}</td>
+      <td>${r.daysIdle}d</td>
+      <td>${r.zombie ? '<span class="badge b-z">ZOMBIE</span>' : r.daysIdle >= threshold * 0.6 ? '<span class="badge b-w">DORMANT</span>' : '<span class="badge b-a">ACTIVE</span>'}</td>
+      <td>${r.zombie ? money(r.wastedMo) + '/mo' : '—'}</td>
+      <td><button class="sec" style="margin-top:0;padding:4px 8px" onclick="delSvc(${r.id})">✕</button></td>
+    </tr>`).join('');
+  document.getElementById('table').innerHTML =
+    `<table><tr><th>Service</th><th>$/mo</th><th>Last active</th><th>Idle</th><th>Status</th><th>Wasted</th><th></th></tr>${rowsHtml || '<tr><td colspan="7" class="hint">No services yet — add one above, or load the sample stack.</td></tr>'}</table>` +
+    (zombieRows.length ? `<p class="hint">Cutting ${zombieRows.length} zombie(s) saves ${money(zombieMo)}/mo (${money(zombieYr)}/yr). Suggested next step: ask the listed owners, then archive the cloud resources and cancel the subscription.</p>` : '<p class="hint">No zombies over the current threshold — healthy stack.</p>');
+}
+
+function delSvc(id) { svcs = svcs.filter(s => s.id !== id); save(); render(); }
+function clearAll() { if (confirm('Remove all services?')) { svcs = []; save(); render(); } }
+function exportCSV() {
+  const threshold = parseInt(document.getElementById('threshold').value) || 90;
+  const today = new Date();
+  const head = 'service,monthly_cost,last_active,owner,days_idle,status\n';
+  const body = svcs.map(s => {
+    const daysIdle = daysBetween(new Date(s.date + 'T00:00:00'), today);
+    return [s.name, s.cost, s.date, s.owner || '', daysIdle, daysIdle >= threshold ? 'ZOMBIE' : 'OK'].map(x => '"' + String(x).replace(/"/g, '""') + '"').join(',');
+  }).join('\n');
+  const blob = new Blob([head + body], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'zombie-stack.csv'; a.click();
+}
+render();
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a23f61f1b964f0b8',t:'MTc4NTUzMDA1Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
