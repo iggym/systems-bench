@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeff Dean Latency & Capacity Profiler</title>
+  <style>
+    :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; --border: #334155; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    h2 { margin-top: 0; color: var(--accent); font-size: 1.2rem; }
+    label { display: block; margin: 10px 0 5px; font-size: 0.9rem; }
+    input, select { width: 100%; padding: 8px; background: #0f172a; border: 1px solid var(--border); color: #fff; border-radius: 4px; box-sizing: border-box; }
+    .metric { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .metric-val { font-weight: bold; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <div class="card">
+      <h2>System Workload Inputs</h2>
+      <label>Target Requests / Sec (RPS)</label>
+      <input type="number" id="rps" value="10000" oninput="calculate()">
+
+      <label>Payload Size per Request (KB)</label>
+      <input type="number" id="payloadKb" value="64" oninput="calculate()">
+
+      <label>Storage Medium</label>
+      <select id="storage" onchange="calculate()">
+        <option value="0.0001">RAM (100 ns)</option>
+        <option value="0.016">SSD Random Read (16 µs)</option>
+        <option value="1.0">SSD Sequential Read (1 ms / MB)</option>
+        <option value="10.0">Magnetic Disk Seek (10 ms)</option>
+      </select>
+
+      <label>Network Hop Type</label>
+      <select id="network" onchange="calculate()">
+        <option value="0.5">Same Datacenter (0.5 ms RTT)</option>
+        <option value="35.0">Cross-Region WAN (35 ms RTT)</option>
+        <option value="150.0">Cross-Continent WAN (150 ms RTT)</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h2>Jeff Dean Diagnostic Metrics</h2>
+      <div class="metric">
+        <span>Network Bandwidth Required:</span>
+        <span class="metric-val" id="outBw">0 MB/s</span>
+      </div>
+      <div class="metric">
+        <span>Estimated Base Latency:</span>
+        <span class="metric-val" id="outLatency">0 ms</span>
+      </div>
+      <div class="metric">
+        <span>Compressed (Snappy 4x):</span>
+        <span class="metric-val" id="outCompBw">0 MB/s</span>
+      </div>
+      <div class="metric">
+        <span>Time Savings via Compression:</span>
+        <span class="metric-val" id="outCompSaved">0 ms</span>
+      </div>
+      <div class="metric">
+        <span>Bottleneck Identification:</span>
+        <span class="metric-val" id="outBottleneck">-</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function calculate() {
+      const rps = parseFloat(document.getElementById('rps').value) || 0;
+      const payloadKb = parseFloat(document.getElementById('payloadKb').value) || 0;
+      const storageMs = parseFloat(document.getElementById('storage').value);
+      const networkMs = parseFloat(document.getElementById('network').value);
+
+      const totalBwMBps = (rps * payloadKb) / 1024;
+      const compBwMBps = totalBwMBps / 4;
+
+      const baseLatency = storageMs + networkMs;
+      // CPU cost for compression (Snappy ~2µs per KB)
+      const compCpuMs = (payloadKb * 0.002);
+      // Transmission savings assumption at 1Gbps (0.01ms per KB)
+      const xferSavingsMs = (payloadKb * 0.75) * 0.01;
+      const netLatencySaved = xferSavingsMs - compCpuMs;
+
+      document.getElementById('outBw').textContent = totalBwMBps.toFixed(2) + ' MB/s';
+      document.getElementById('outCompBw').textContent = compBwMBps.toFixed(2) + ' MB/s';
+      document.getElementById('outLatency').textContent = baseLatency.toFixed(2) + ' ms';
+      document.getElementById('outCompSaved').textContent = (netLatencySaved > 0 ? '+' : '') + netLatencySaved.toFixed(3) + ' ms';
+
+      let bottleneck = "CPU Bound";
+      if (networkMs > storageMs && networkMs > 10) bottleneck = "Network WAN Latency";
+      else if (storageMs > networkMs) bottleneck = "I/O Disk Latency";
+      else if (totalBwMBps > 125) bottleneck = "Network Bandwidth saturation (>1Gbps)";
+
+      document.getElementById('outBottleneck').textContent = bottleneck;
+    }
+    calculate();
+  </script>
+</body>
+</html>
+
