@@ -4,21 +4,62 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReAct Loop Visualizer</title>
   <style>
-    :root { --bg: #090d16; --card: #111827; --border: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 900px; margin: 0 auto; }
-    .step { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: 14px; margin-bottom: 12px; border-radius: 6px; }
-    .tag { font-weight: bold; color: var(--accent); font-family: monospace; }
+    :root { --bg: #090d16; --card: #111827; --border: #1e293b; --text: #f8fafc; --accent: #38bdf8; --thought: #38bdf8; --action: #fbbf24; --obs: #34d399; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    header { border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    textarea { width: 100%; height: 350px; background: #000; border: 1px solid var(--border); color: #38bdf8; font-family: monospace; font-size: 0.85rem; padding: 12px; border-radius: 6px; }
+    .timeline { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 500px; }
+    .step { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: 6px; padding: 12px; }
+    .step.Thought { border-left-color: var(--thought); }
+    .step.Action { border-left-color: var(--action); }
+    .step.Observation { border-left-color: var(--obs); }
+    .badge { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-bottom: 6px; color: #000; }
+    .badge.Thought { background: var(--thought); } .badge.Action { background: var(--action); } .badge.Observation { background: var(--obs); }
+    button { background: var(--accent); color: #000; font-weight: 700; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
   </style>
 </head>
 <body>
-  <h1 style="margin-bottom:16px;">ReAct Execution Trace Trace Tree</h1>
-  <div class="step"><span class="tag">THOUGHT 1:</span> User requested weather for Dallas and stock price for TSLA. Need to fetch weather first.</div>
-  <div class="step"><span class="tag">ACTION 1:</span> get_weather(location="Dallas, TX")</div>
-  <div class="step"><span class="tag">OBSERVATION 1:</span> {"temp": 82, "condition": "Clear"}</div>
-  <div class="step"><span class="tag">THOUGHT 2:</span> Weather fetched. Now querying TSLA stock quote.</div>
-  <div class="step"><span class="tag">ACTION 2:</span> get_stock_price(ticker="TSLA")</div>
-  <div class="step"><span class="tag">OBSERVATION 2:</span> {"price": 240.50, "currency": "USD"}</div>
-  <div class="step"><span class="tag">FINAL ANSWER:</span> The current temperature in Dallas is 82°F (Clear), and TSLA is trading at $240.50 USD.</div>
+  <header><h1>ReAct Loop Visualizer</h1></header>
+  <div class="grid">
+    <div>
+      <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:8px;">Paste raw Agent Trace logs (Thought / Action / Observation pattern):</p>
+      <textarea id="traceInput">Thought: Need to lookup user billing history.
+Action: query_db({"user_id": 402, "table": "invoices"})
+Observation: [{"id": 901, "amount": 120.00, "status": "unpaid"}]
+Thought: Invoice is unpaid. Triggering automated reminder email.
+Action: send_email({"user_id": 402, "template": "overdue_notice"})
+Observation: {"status": "queued", "message_id": "msg_90123"}</textarea>
+      <button style="margin-top:10px;" onclick="parseTrace()">Render ReAct Loop</button>
+    </div>
+    <div>
+      <h3>Execution Timeline</h3>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </div>
+  <script>
+    function parseTrace() {
+      const raw = document.getElementById('traceInput').value;
+      const lines = raw.split('\n');
+      const timeline = document.getElementById('timeline');
+      timeline.innerHTML = '';
+      lines.forEach(line => {
+        let type = '';
+        if (line.startsWith('Thought:')) type = 'Thought';
+        else if (line.startsWith('Action:')) type = 'Action';
+        else if (line.startsWith('Observation:')) type = 'Observation';
+        if (type) {
+          const content = line.replace(/^(Thought|Action|Observation):/, '').trim();
+          const div = document.createElement('div');
+          div.className = `step ${type}`;
+          div.innerHTML = `<span class="badge ${type}">${type}</span><div style="font-family:monospace; font-size:0.85rem;">${content}</div>`;
+          timeline.appendChild(div);
+        }
+      });
+    }
+    parseTrace();
+  </script>
 </body>
 </html>
