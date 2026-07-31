@@ -2,47 +2,117 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Cost-per-Token Velocity Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meter Shock — usage-bill blowout predictor</title>
 <style>
-:root{--bg:#09090b;--surface:#121215;--border:#27272a;--text:#f4f4f5;--text-muted:#a1a1aa;--accent:#3b82f6;--font-sans:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;--font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--font-sans);padding:2rem 1rem;}
-.container{max-width:800px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;}
-h1{font-size:1.25rem;font-weight:600;margin-bottom:0.25rem;}
-p{color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem;}
-.form-group{margin-bottom:1rem;}
-label{display:block;font-size:0.75rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;}
-input, select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.6rem;border-radius:6px;font-size:0.85rem;}
-button{background:#1a1a1e;color:var(--text);border:1px solid var(--border);padding:0.6rem 1rem;border-radius:6px;font-size:0.85rem;cursor:pointer;width:100%;margin-top:0.5rem;}
-button:hover{border-color:var(--accent);}
-.metrics{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.5rem;}
-.card{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center;}
-.val{font-size:1.5rem;font-weight:600;font-family:var(--font-mono);color:var(--text);margin-top:0.25rem;}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:900px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+input{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px;width:100%}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.big{font-size:2.2rem;font-weight:800;font-family:var(--mono)}
+.metric{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;margin-top:10px}
+.metric .lbl{font-size:.68rem;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
+.metric .val{font-size:1.15rem;font-family:var(--mono);font-weight:700;margin-top:2px}
+.hint{font-size:.75rem;color:var(--muted);margin-top:8px}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>Cost-per-Token Velocity Tracker</h1>
-<p>Live sliding-window budget burn estimator calculating cost-per-successful-task.</p>
-<div class="form-group"><label>Model Tier</label><select id="model"><option value="9">Claude 3.5 Sonnet ($9/M blended)</option><option value="6.25">GPT-4o ($6.25/M blended)</option></select></div>
-<div class="form-group"><label>Completed Tasks</label><input type="number" id="tasks" value="142"></div>
-<div class="form-group"><label>Total Tokens Dispatched</label><input type="number" id="tokens" value="4520000"></div>
-<button onclick="calc()">Calculate Velocity</button>
-<div class="metrics">
-<div class="card"><label>Cost / Task</label><div id="cost-task" class="val">$0.00</div></div>
-<div class="card"><label>Hourly Burn</label><div id="cost-burn" class="val">$0.00</div></div>
-</div>
+<h1>Meter Shock</h1>
+<p class="sub">Sees the blowout before the bill does: projects your usage-based spend to month-end from today's burn rate, and tells you the exact day you cross your budget.</p>
+<div class="grid">
+  <div class="card">
+    <label>Monthly budget ($)</label>
+    <input id="budget" value="500">
+    <label>Current day of billing cycle (1–31)</label>
+    <input id="dayOfMonth" value="12">
+    <label>Days in this billing cycle</label>
+    <input id="daysInMonth" value="30">
+    <label>Spend so far this cycle ($)</label>
+    <input id="spendSoFar" value="210">
+    <label>Spend in the last 7 days ($, optional — for trailing-window velocity)</label>
+    <input id="spendLast7" value="185">
+    <label>Optional: tasks completed so far</label>
+    <input id="tasks" value="14200">
+    <label>Optional: tokens dispatched so far</label>
+    <input id="tokens" value="452000000">
+    <button onclick="calculate()">Project the Blowout</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Projection</span>
+      <span id="statusBadge" class="badge b-ok">READY</span>
+    </div>
+    <div id="report"></div>
+    <div class="hint">Math: burn/day = spend ÷ elapsed days; projected month-end = burn/day × days in cycle; blowout day = budget ÷ burn/day. The 7-day window is compared to the month-to-date window to catch acceleration or deceleration.</div>
+  </div>
 </div>
 <script>
-function calc() {
-    let rate = parseFloat(document.getElementById('model').value);
-    let tasks = parseFloat(document.getElementById('tasks').value) || 1;
-    let tokens = parseFloat(document.getElementById('tokens').value) || 0;
-    let total = (tokens / 1000000) * rate;
-    document.getElementById('cost-task').textContent = `$${(total/tasks).toFixed(4)}`;
-    document.getElementById('cost-burn').textContent = `$${(total*12).toFixed(2)}/hr`;
+const money = n => '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money0 = n => '$' + Math.round(n).toLocaleString();
+
+function calculate() {
+  const budget = parseFloat(document.getElementById('budget').value) || 0;
+  const day = Math.max(1, parseInt(document.getElementById('dayOfMonth').value) || 1);
+  const dim = Math.max(day, parseInt(document.getElementById('daysInMonth').value) || 30);
+  const spend = parseFloat(document.getElementById('spendSoFar').value) || 0;
+  const last7 = parseFloat(document.getElementById('spendLast7').value) || null;
+  const tasks = parseFloat(document.getElementById('tasks').value) || null;
+  const tokens = parseFloat(document.getElementById('tokens').value) || null;
+
+  const statusEl = document.getElementById('statusBadge');
+  const report = document.getElementById('report');
+  if (budget <= 0 || spend <= 0) {
+    statusEl.textContent = 'INPUTS'; statusEl.className = 'badge b-warn';
+    report.innerHTML = '<p class="hint">Enter a budget and current spend.</p>';
+    return;
+  }
+  const elapsed = day;
+  const daysLeft = Math.max(1, dim - day);
+  const burnPerDay = spend / elapsed;
+  const projected = burnPerDay * dim;
+  const headroom = budget - projected;
+  const blowoutDay = burnPerDay > 0 ? Math.ceil(budget / burnPerDay) : null;
+  const onTrack = projected <= budget;
+  const pctUsed = (projected / budget) * 100;
+
+  let windowNote = '';
+  if (last7 !== null && !isNaN(last7)) {
+    const trailingBurn = last7 / 7;
+    const ratio = trailingBurn / burnPerDay;
+    const trailingProjected = trailingBurn * dim;
+    windowNote = `<div class="metric"><div class="lbl">7-day trailing projection</div><div class="val">${money0(trailingProjected)} <span class="hint">(${ratio.toFixed(2)}× month-to-date rate — ${ratio > 1.15 ? 'accelerating ⚠' : ratio < 0.85 ? 'decelerating' : 'steady'})</span></div></div>`;
+  }
+
+  let velocity = '';
+  if (tasks) velocity += `<div class="metric"><div class="lbl">Cost per completed task</div><div class="val">${money(spend / tasks)}</div></div>`;
+  if (tokens) velocity += `<div class="metric"><div class="lbl">Effective blended $/1M tokens</div><div class="val">${money((spend / (tokens / 1e6)))}</div></div>`;
+
+  const when = blowoutDay !== null && blowoutDay <= dim
+    ? `Blowout lands on <b>day ${blowoutDay}</b> — ${blowoutDay - day} day(s) from now.`
+    : 'Projected spend stays inside budget this cycle.';
+
+  statusEl.textContent = onTrack ? 'ON TRACK' : 'BLOWOUT ' + blowoutDay;
+  statusEl.className = 'badge ' + (onTrack ? 'b-ok' : 'b-err');
+
+  report.innerHTML =
+    `<div class="metric"><div class="lbl">Projected month-end spend</div><div class="val" style="color:${onTrack ? 'var(--ok)' : 'var(--err)'}">${money0(projected)} <span class="hint">(${pctUsed.toFixed(0)}% of budget)</span></div></div>
+     <div class="metric"><div class="lbl">Headroom (−) / overrun (+)</div><div class="val">${money0(headroom >= 0 ? -headroom : headroom * -1)}<span class="hint"> ${headroom >= 0 ? 'remaining' : 'over budget'}</span></div></div>
+     <div class="metric"><div class="lbl">Burn rate</div><div class="val">${money(burnPerDay)}/day</div></div>
+     ${windowNote}${velocity}
+     <div class="metric"><div class="lbl">Verdict</div><div class="val" style="font-size:.9rem;font-weight:400;line-height:1.4">${when}</div></div>`;
 }
-calc();
+calculate();
 </script>
 </body>
 </html>
