@@ -3,95 +3,206 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Golden Dataset Harness — systems-bench</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Golden Dataset Test Harness</title>
 <style>
-  :root {
-    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
-    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
-    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
-  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
-  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
-  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
-  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
-  textarea { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; resize: none; line-height: 1.5; }
-  textarea:focus { border-color: var(--accent-tag); }
-  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
-  button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
-  button:hover { border-color: var(--accent-tag); color: var(--accent-signal); }
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input,select{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem;resize:vertical}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:420px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-live{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-local{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.pass{color:var(--ok)} .fail{color:var(--err)} .muted{color:var(--muted)}
 </style>
 </head>
 <body>
-<header>
-  <h1 class="title">Golden Dataset Harness</h1>
-</header>
-<main>
-  <div class="panel">
-    <div class="panel-header">Golden Test Suite (JSON)</div>
-    <div class="panel-body">
-      <label>Input Dataset Array</label>
-      <textarea id="datasetInput" spellcheck="false">[
+<h1>Golden Dataset Test Harness</h1>
+<p class="sub">Batch regression runner for JSON/CSV golden datasets. <span class="badge b-live">LIVE MODE</span> runs every prompt through a real model and diffs the JSON output against <code>expected_json</code>. <span class="badge b-local">LOCAL MODE</span> (no key) lints the dataset itself — no fabricated results.</p>
+<div class="grid">
+  <div class="card">
+    <label>Dataset — JSON array of {id, prompt, expected_json}</label>
+    <textarea id="datasetInput" rows="14" spellcheck="false">[
   {
     "id": "test_01",
     "prompt": "Extract user email and account tier from: 'Contact user@domain.com, tier: enterprise'",
     "expected_json": { "email": "user@domain.com", "tier": "enterprise" }
+  },
+  {
+    "id": "test_02",
+    "prompt": "Extract user email and account tier from: 'Reach out to ada@corp.io, tier: free'",
+    "expected_json": { "email": "ada@corp.io", "tier": "free" }
+  },
+  {
+    "id": "test_03",
+    "prompt": "List the cities mentioned: 'Flew from Austin to Seattle via Denver.'",
+    "expected_json": { "cities": ["Austin", "Seattle", "Denver"] }
   }
 ]</textarea>
-      <button onclick="runTests()">Execute Regression Suite</button>
+    <label>Gemini API key (optional — unlocks live model run; stays in your browser)</label>
+    <input type="password" id="geminiKey" placeholder="AIza... (free tier works)">
+    <label>Output model</label>
+    <select id="modelSel">
+      <option value="gemini-2.5-flash">gemini-2.5-flash (fast, cheap)</option>
+      <option value="gemini-2.5-pro">gemini-2.5-pro (smarter)</option>
+    </select>
+    <div style="display:flex;gap:10px">
+      <button style="flex:1" onclick="lintDataset()">Local Dataset Lint (no key)</button>
+      <button style="flex:1" onclick="runSuite()">Run Live Regression Suite</button>
     </div>
   </div>
-  <div class="panel" style="border-right: none;">
-    <div class="panel-header">
-      <span>Evaluation Report</span>
-      <span id="testStatus" style="color:var(--accent-signal)">IDLE</span>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Evaluation report</span>
+      <span id="statusBadge" class="badge b-local">IDLE</span>
     </div>
-    <div class="panel-body">
-      <label>Execution Output Log</label>
-      <pre id="reportOutput">Click 'Execute Regression Suite' to run evaluations.</pre>
-    </div>
+    <pre id="reportOutput">Paste a golden dataset, then either lint it locally or run it against a live model.</pre>
   </div>
-</main>
+</div>
 <script>
-  const datasetInput = document.getElementById('datasetInput');
-  const reportOutput = document.getElementById('reportOutput');
-  const testStatus = document.getElementById('testStatus');
+const estTok = s => Math.ceil((s||'').trim().split(/\s+/).filter(Boolean).length * 1.33);
 
-  function runTests() {
-    try {
-      const dataset = JSON.parse(datasetInput.value);
-      let passed = 0;
-      let total = dataset.length;
-      let logs = [];
+function parseDataset() {
+  const raw = document.getElementById('datasetInput').value.trim();
+  if (!raw) throw new Error('dataset is empty');
+  if (raw.startsWith('[')) return JSON.parse(raw);
+  // CSV fallback: header id,prompt,expected (expected may be a JSON string)
+  const rows = raw.split(/\r?\n/).map(r => r.split(',')).filter(r => r.length >= 2);
+  const [head, ...rest] = rows;
+  const idx = { id: head.indexOf('id'), prompt: head.indexOf('prompt'), expected: head.indexOf('expected') };
+  if (idx.prompt < 0) throw new Error('CSV needs a "prompt" column');
+  return rest.map((r, i) => {
+    let expected = {};
+    try { expected = JSON.parse(r[idx.expected] ?? '{}'); } catch (e) { expected = { _raw: r[idx.expected] ?? '' }; }
+    return { id: (idx.id >= 0 ? r[idx.id] : 'csv_' + i) || 'csv_' + i, prompt: r[idx.prompt], expected_json: expected };
+  });
+}
 
-      dataset.forEach((item, idx) => {
-        // Deterministic validation check mock
-        const success = item.id && item.prompt && item.expected_json;
-        if (success) passed++;
-        logs.push(`[${item.id || 'case_' + idx}] -> ${success ? 'PASS (Assertion Match)' : 'FAIL (Schema Mismatch)'}`);
-      });
+function lintDataset() {
+  const statusEl = document.getElementById('statusBadge');
+  const out = document.getElementById('reportOutput');
+  try {
+    const ds = parseDataset();
+    const ids = new Map();
+    const dups = [];
+    let missingExpected = 0, totalTokens = 0, keyCoverage = {};
+    ds.forEach((c, i) => {
+      if (!c.id) c.id = 'case_' + i;
+      if (ids.has(c.id)) dups.push(c.id); else ids.set(c.id, 1);
+      if (!c.expected_json) missingExpected++;
+      totalTokens += estTok(c.prompt);
+      Object.keys(c.expected_json || {}).forEach(k => keyCoverage[k] = (keyCoverage[k] || 0) + 1);
+    });
+    const issues = [];
+    if (dups.length) issues.push('Duplicate ids: ' + dups.join(', '));
+    if (missingExpected) issues.push(missingExpected + ' case(s) missing expected_json');
+    if (ds.length === 0) issues.push('Dataset is empty');
+    const topKeys = Object.entries(keyCoverage).sort((a,b) => b[1]-a[1]).slice(0,8);
+    const ok = issues.length === 0;
+    statusEl.textContent = ok ? 'LINT PASS' : 'LINT ISSUES';
+    statusEl.className = 'badge ' + (ok ? 'b-live' : 'b-err');
+    out.textContent = JSON.stringify({
+      mode: 'LOCAL_LINT', status: ok ? 'PASS' : 'ISSUES_FOUND',
+      cases: ds.length, estimated_prompt_tokens: totalTokens,
+      issues, expected_key_coverage: Object.fromEntries(topKeys),
+      note: 'Local lint checks dataset integrity only. Paste a Gemini key and click "Run Live Regression Suite" to actually execute prompts.'
+    }, null, 2);
+  } catch (e) {
+    statusEl.textContent = 'PARSE ERROR'; statusEl.className = 'badge b-err';
+    out.textContent = 'Error: ' + e.message;
+  }
+}
 
-      testStatus.textContent = passed === total ? "PASSED" : "FAILURES DETECTED";
-      testStatus.style.color = passed === total ? "var(--accent-signal)" : "#ff5e5e";
+async function callGemini(prompt, model) {
+  const key = document.getElementById('geminiKey').value.trim();
+  if (!key) throw new Error('NO_KEY');
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1 } })
+  });
+  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error('API ' + (e.error?.message || r.status)); }
+  const d = await r.json();
+  return (d.candidates?.[0]?.content?.parts?.[0]?.text) || '';
+}
+const stripFences = s => s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
 
-      reportOutput.textContent = JSON.stringify({
-        total_cases: total,
-        passed_assertions: passed,
-        failed_assertions: total - passed,
-        pass_rate: `${((passed / total) * 100).toFixed(1)}%`,
-        execution_logs: logs
-      }, null, 2);
-    } catch (e) {
-      testStatus.textContent = "SYNTAX ERROR";
-      testStatus.style.color = "#ff5e5e";
-      reportOutput.textContent = "Error: Invalid JSON format in test suite definition.";
+function deepEqual(a, b, path = '', diffs = []) {
+  if (a === null || b === null) { if (a !== b) diffs.push(`${path || '$'}: expected ${JSON.stringify(a)} got ${JSON.stringify(b)}`); return diffs; }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) diffs.push(`${path || '$'}: array length ${a.length} != ${b.length}`);
+    a.forEach((v, i) => deepEqual(v, b[i], `${path}[${i}]`, diffs));
+    return diffs;
+  }
+  if (typeof a === 'object' && typeof b === 'object') {
+    Object.keys(a).forEach(k => deepEqual(a[k], b[k], path ? path + '.' + k : k, diffs));
+    return diffs;
+  }
+  if (typeof a === 'number' && typeof b === 'string') b = Number(b);
+  if (typeof b === 'number' && typeof a === 'string') a = Number(a);
+  if (a !== b) diffs.push(`${path || '$'}: expected ${JSON.stringify(a)} got ${JSON.stringify(b)}`);
+  return diffs;
+}
+
+async function runSuite() {
+  const statusEl = document.getElementById('statusBadge');
+  const out = document.getElementById('reportOutput');
+  let ds;
+  try { ds = parseDataset(); } catch (e) { statusEl.textContent = 'PARSE ERROR'; statusEl.className = 'badge b-err'; out.textContent = 'Error: ' + e.message; return; }
+  const model = document.getElementById('modelSel').value;
+  const key = document.getElementById('geminiKey').value.trim();
+  if (!key) {
+    statusEl.textContent = 'KEY REQUIRED'; statusEl.className = 'badge b-err';
+    out.textContent = 'Live run needs a Gemini API key (free tier fine). It is sent only from your browser to Google. Without a key, use Local Dataset Lint.';
+    return;
+  }
+  statusEl.textContent = 'RUNNING…'; statusEl.className = 'badge b-live';
+  out.textContent = 'Executing ' + ds.length + ' cases…';
+  const results = [];
+  const concurrency = 4;
+  let qi = 0, done = 0;
+  async function worker() {
+    while (qi < ds.length) {
+      const i = qi++, c = ds[i];
+      const t0 = performance.now();
+      try {
+        const resp = await callGemini(
+          'You are a strict data extractor. Return ONLY valid JSON matching the requested shape.\nCase: ' + c.prompt, model);
+        const parsed = JSON.parse(stripFences(resp));
+        const diffs = deepEqual(c.expected_json, parsed);
+        results.push({ id: c.id, ok: diffs.length === 0, diffs, latency: Math.round(performance.now() - t0), raw: resp.slice(0, 300) });
+      } catch (e) {
+        results.push({ id: c.id, ok: false, diffs: [e.message], latency: Math.round(performance.now() - t0), raw: '' });
+      }
+      if (++done === ds.length) renderResults(results, ds.length, model);
     }
   }
+  await Promise.all(Array.from({ length: Math.min(concurrency, ds.length) }, worker));
+}
+
+function renderResults(results, total, model) {
+  const statusEl = document.getElementById('statusBadge');
+  const out = document.getElementById('reportOutput');
+  const passed = results.filter(r => r.ok).length;
+  statusEl.textContent = passed === total ? 'PASSED' : (passed + '/' + total + ' PASS');
+  statusEl.className = 'badge ' + (passed === total ? 'b-live' : 'b-err');
+  const rows = results.map(r =>
+    `<tr><td class="${r.ok ? 'pass' : 'fail'}">${r.ok ? 'PASS' : 'FAIL'}</td><td>${r.id}</td><td class="muted">${r.latency}ms</td><td class="muted">${(r.diffs.length ? r.diffs.slice(0, 2).join(' · ') : 'exact match').slice(0, 160) || ''}</td></tr>`).join('');
+  const avgLat = Math.round(results.reduce((s, r) => s + r.latency, 0) / (results.length || 1));
+  out.innerHTML = `<table><tr><th>Result</th><th>Case</th><th>Latency</th><th>Diff / note</th></tr>${rows}</table>` +
+    `<div class="badge ${passed === total ? 'b-live' : 'b-err'}" style="margin-top:10px">${passed}/${total} passed (${((passed/total)*100).toFixed(1)}%) · avg ${avgLat}ms · model ${model} · live</div>`;
+}
 </script>
 </body>
 </html>
