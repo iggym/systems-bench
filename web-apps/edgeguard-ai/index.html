@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EdgeGuard AI - Sub-Second Latency Proxy & Guard</title>
+  <style>
+    :root { --bg: #090d16; --card: #111827; --accent: #10b981; --border: #1f2937; --text: #f3f4f6; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 24px; }
+    .layout { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 768px) { .layout { grid-template-columns: 1fr; } }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p { color: #9ca3af; font-size: 0.9rem; line-height: 1.4; }
+    label { display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin: 12px 0 4px; }
+    input, textarea, select { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+    button { background: var(--accent); color: #000; font-weight: 700; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 16px; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    .console { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 0.85rem; min-height: 180px; overflow-y: auto; color: #a7f3d0; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: #065f46; color: #34d399; }
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .metric-box { background: #000; padding: 12px; border-radius: 6px; border: 1px solid var(--border); text-align: center; }
+    .metric-val { font-size: 1.4rem; font-weight: bold; color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="card">
+      <h1>EdgeGuard AI</h1>
+      <p>Dual-Engine Inference Routing: Uses Groq for sub-second execution with speculative fallback to Gemini for context enrichment.</p>
+      
+      <label>Groq API Key (Free Tier)</label>
+      <input type="password" id="groqKey" placeholder="gsk_...">
+
+      <label>Gemini API Key (Free Tier)</label>
+      <input type="password" id="geminiKey" placeholder="AIzaSy...">
+
+      <label>Prompt / Tool Instruction</label>
+      <textarea id="promptInput" rows="4">Summarize the latency impact of network round trips vs cache hits in under 50 words.</textarea>
+
+      <button onclick="executeHedgedInference()">Run Dual-Engine Request</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Execution Diagnostics</h2>
+        <span class="badge" id="statusBadge">Ready</span>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric-box">
+          <div style="font-size:0.75rem; color:#9ca3af;">Primary Latency</div>
+          <div class="metric-val" id="primaryTime">0 ms</div>
+        </div>
+        <div class="metric-box">
+          <div style="font-size:0.75rem; color:#9ca3af;">Engine Selected</div>
+          <div class="metric-val" id="engineUsed" style="font-size:1rem; padding-top:4px;">-</div>
+        </div>
+      </div>
+
+      <label>Live Console Output</label>
+      <div class="console" id="consoleLog">// Output will stream here...</div>
+    </div>
+  </div>
+
+  <script>
+    function log(msg) {
+      const consoleEl = document.getElementById('consoleLog');
+      consoleEl.innerHTML += `<div>> ${msg}</div>`;
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    async function executeHedgedInference() {
+      const groqKey = document.getElementById('groqKey').value.trim();
+      const geminiKey = document.getElementById('geminiKey').value.trim();
+      const prompt = document.getElementById('promptInput').value.trim();
+
+      if (!groqKey || !geminiKey) {
+        alert('Please supply API keys for both free tiers.');
+        return;
+      }
+
+      document.getElementById('consoleLog').innerHTML = '';
+      document.getElementById('statusBadge').textContent = 'Executing';
+      log('Initiating parallel inference strategy...');
+
+      const startTime = performance.now();
+      let winner = null;
+
+      // 1. Primary Engine: Groq Llama 3.1 8B (Sub-second target)
+      const fetchGroq = async () => {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 150
+          })
+        });
+        const data = await res.json();
+        return { engine: 'Groq (Llama 3.1 8B)', text: data.choices[0].message.content };
+      };
+
+      // 2. Hedge Engine: Gemini Flash (Fired speculatively if threshold passes)
+      const fetchGemini = async () => {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+        const data = await res.json();
+        return { engine: 'Gemini 2.5 Flash', text: data.candidates[0].content.parts[0].text };
+      };
+
+      try {
+        // Hedging mechanism: race primary request against backup delay
+        const hedgeDelayPromise = new Promise((resolve) => {
+          setTimeout(() => {
+            log('Hedge threshold hit (250ms). Triggering Gemini Flash backup...');
+            fetchGemini().then(resolve).catch(() => {});
+          }, 250);
+        });
+
+        const primaryPromise = fetchGroq();
+        const result = await Promise.race([primaryPromise, hedgeDelayPromise]);
+
+        const elapsed = (performance.now() - startTime).toFixed(1);
+        document.getElementById('primaryTime').textContent = `${elapsed} ms`;
+        document.getElementById('engineUsed').textContent = result.engine;
+        document.getElementById('statusBadge').textContent = 'Complete';
+        
+        log(`Fastest Response from [${result.engine}] in ${elapsed}ms:`);
+        log(result.text);
+
+      } catch (err) {
+        log(`Error during execution: ${err.message}`);
+        document.getElementById('statusBadge').textContent = 'Error';
+      }
+    }
+  </script>
+</body>
+</html>
