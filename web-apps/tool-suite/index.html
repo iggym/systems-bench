@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Engineering Tool Suite</title>
+  <title>AI Systems Engineering Hub</title>
   <style>
     :root {
       --bg: #090d16;
@@ -26,20 +26,18 @@
     header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; }
     header p { color: var(--muted); font-size: 0.9rem; }
 
-    /* Controls Bar */
     .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
     .search-box { flex: 1; min-width: 240px; }
-    input, select { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; outline: none; width: 100%; transition: border-color 0.2s; }
-    input:focus, select:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); }
+    input { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; outline: none; width: 100%; transition: border-color 0.2s; }
+    input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow); }
     
     .filter-tags { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
     .filter-btn { background: var(--card); border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
     .filter-btn.active, .filter-btn:hover { background: var(--accent); color: #000; font-weight: 600; border-color: var(--accent); }
 
-    /* Grid Layout */
     .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
-    .tool-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; text-decoration: none; color: inherit; transition: all 0.2s ease; position: relative; }
+    .tool-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; text-decoration: none; color: inherit; transition: all 0.2s ease; }
     .tool-card:hover { background: var(--card-hover); border-color: var(--border-focus); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
 
     .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -81,16 +79,11 @@
   <div class="empty-state" id="emptyState">No tools matching your search filter.</div>
 
   <script>
-    // Relative base path detector to ensure clean routing on GitHub Pages or custom domains
-    const BASE_PATH = window.location.pathname.endsWith('/') 
-      ? window.location.pathname 
-      : window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-
     const TOOLS = [
       {
         "id": "context-compactor",
         "name": "Context Budgeting & Compactor",
-        "path": "context-compactor/index.html",
+        "path": "web-apps/context-compactor/index.html",
         "description": "Visual token tracking and sliding-window compaction to eliminate context rot before passing context to Gemini or Groq.",
         "tags": ["web-apps", "context-engineering", "tokens", "optimization"],
         "status": "live",
@@ -99,7 +92,7 @@
       {
         "id": "react-loop-visualizer",
         "name": "ReAct Loop Visualizer",
-        "path": "react-loop-visualizer/index.html",
+        "path": "web-apps/react-loop-visualizer/index.html",
         "description": "Trace tree inspector showing intermediate agent Thought -> Action -> Observation steps with step-pause controls.",
         "tags": ["web-apps", "harnesses", "loops", "agentic-ai"],
         "status": "live",
@@ -108,7 +101,7 @@
       {
         "id": "mcp-schema-converter",
         "name": "MCP Client Inspector",
-        "path": "mcp-schema-converter/index.html",
+        "path": "web-apps/mcp-schema-converter/index.html",
         "description": "Inspects and compiles tool definitions into OpenAI/Gemini JSON schemas for seamless context injection.",
         "tags": ["web-apps", "mcp", "context-engineering", "tools"],
         "status": "live",
@@ -117,7 +110,7 @@
       {
         "id": "schema-repair-engine",
         "name": "JSON Schema Repair Loop",
-        "path": "schema-repair-engine/index.html",
+        "path": "web-apps/schema-repair-engine/index.html",
         "description": "Validates structured outputs against JSON Schema and triggers targeted correction loops upon validation failures.",
         "tags": ["web-apps", "harnesses", "validation", "json"],
         "status": "live",
@@ -126,7 +119,7 @@
       {
         "id": "multi-llm-arena",
         "name": "Multi-LLM Arena & Parallel Tester",
-        "path": "multi-llm-arena/index.html",
+        "path": "web-apps/multi-llm-arena/index.html",
         "description": "Run identical prompts in parallel across Gemini and Groq (Llama-3) to compare diffs, TTFT, and token velocity.",
         "tags": ["web-apps", "evaluations", "benchmarking", "multi-llm"],
         "status": "live",
@@ -135,7 +128,7 @@
       {
         "id": "llm-rubric-judge",
         "name": "LLM-as-a-Judge Rubric Evaluator",
-        "path": "llm-rubric-judge/index.html",
+        "path": "web-apps/llm-rubric-judge/index.html",
         "description": "Automate model grading against custom multi-dimensional rubrics with explicit reasoning outputs.",
         "tags": ["web-apps", "evaluations", "rubrics", "quality"],
         "status": "live",
@@ -144,7 +137,7 @@
       {
         "id": "context-firewall",
         "name": "Context Firewall & Hand-off Generator",
-        "path": "context-firewall/index.html",
+        "path": "web-apps/context-firewall/index.html",
         "description": "Strips out execution noise from long agent chats and exports structured state hand-off files to reset context windows.",
         "tags": ["web-apps", "context-engineering", "memory", "state"],
         "status": "live",
@@ -153,7 +146,7 @@
       {
         "id": "needle-haystack-benchmarker",
         "name": "Needle in a Haystack Benchmarker",
-        "path": "needle-haystack-benchmarker/index.html",
+        "path": "web-apps/needle-haystack-benchmarker/index.html",
         "description": "Tests semantic retrieval accuracy by embedding targets at varying context depth percentages (0%–100%).",
         "tags": ["web-apps", "context-engineering", "evaluations", "rag"],
         "status": "live",
@@ -162,7 +155,7 @@
       {
         "id": "prompt-mutation-optimizer",
         "name": "System Prompt Mutation Optimizer",
-        "path": "prompt-mutation-optimizer/index.html",
+        "path": "web-apps/prompt-mutation-optimizer/index.html",
         "description": "Iteratively mutates base prompts, evaluates variations against target criteria, and selects optimal versions.",
         "tags": ["web-apps", "context-engineering", "optimization", "prompts"],
         "status": "live",
@@ -171,7 +164,7 @@
       {
         "id": "hitl-gatekeeper",
         "name": "Agentic HITL Gatekeeper",
-        "path": "hitl-gatekeeper/index.html",
+        "path": "web-apps/hitl-gatekeeper/index.html",
         "description": "Diffs proposed agent tool calls for human-in-the-loop approval, modification, or rejection before execution.",
         "tags": ["web-apps", "harnesses", "loops", "hitl", "safety"],
         "status": "live",
@@ -180,7 +173,7 @@
       {
         "id": "golden-dataset-harness",
         "name": "Golden Dataset Test Harness",
-        "path": "golden-dataset-harness/index.html",
+        "path": "web-apps/golden-dataset-harness/index.html",
         "description": "Batch executes CSV/JSON test cases through Cloudflare Worker edge routes to catch prompt regression errors.",
         "tags": ["web-apps", "evaluations", "testing", "regression"],
         "status": "live",
@@ -189,7 +182,7 @@
       {
         "id": "adversarial-red-teamer",
         "name": "Adversarial Edge-Case Red-Teamer",
-        "path": "adversarial-red-teamer/index.html",
+        "path": "web-apps/adversarial-red-teamer/index.html",
         "description": "Stress-tests system prompts against injection attacks, roleplay escapes, and malformed inputs.",
         "tags": ["web-apps", "evaluations", "security", "red-teaming"],
         "status": "live",
@@ -198,7 +191,7 @@
       {
         "id": "fewshot-example-builder",
         "name": "Few-Shot Canonical Example Builder",
-        "path": "fewshot-example-builder/index.html",
+        "path": "web-apps/fewshot-example-builder/index.html",
         "description": "Curates and deduplicates input-output pairs into dense system instructions while monitoring token overhead.",
         "tags": ["web-apps", "context-engineering", "prompts", "tokens"],
         "status": "live",
@@ -207,7 +200,7 @@
       {
         "id": "latency-cost-profiler",
         "name": "Model Latency & Cost Profiler",
-        "path": "latency-cost-profiler/index.html",
+        "path": "web-apps/latency-cost-profiler/index.html",
         "description": "Profiles real-time Time-To-First-Token (TTFT), generation speed (tok/s), and estimated cost per API execution.",
         "tags": ["web-apps", "evaluations", "metrics", "cost"],
         "status": "live",
@@ -216,7 +209,7 @@
       {
         "id": "compression-ratio-benchmarker",
         "name": "Context Compression Benchmarker",
-        "path": "compression-ratio-benchmarker/index.html",
+        "path": "web-apps/compression-ratio-benchmarker/index.html",
         "description": "Measures lossy vs. lossless context summarization strategies using LLM-as-a-Judge semantic similarity scores.",
         "tags": ["web-apps", "context-engineering", "benchmarking", "summarization"],
         "status": "live",
@@ -225,7 +218,7 @@
       {
         "id": "gan-contract-evaluator",
         "name": "Multi-Agent GAN Contract Evaluator",
-        "path": "gan-contract-evaluator/index.html",
+        "path": "web-apps/gan-contract-evaluator/index.html",
         "description": "Orchestrates Generator and Critique agents to refine and evaluate outputs against strict requirements prior to output.",
         "tags": ["web-apps", "harnesses", "evaluations", "agentic-ai"],
         "status": "live",
@@ -234,7 +227,7 @@
       {
         "id": "worker-backoff-gateway",
         "name": "Edge Exponential Backoff Gateway",
-        "path": "worker-backoff-gateway/index.html",
+        "path": "web-apps/worker-backoff-gateway/index.html",
         "description": "Cloudflare Worker proxy implementing jittered exponential backoff for handling HTTP 429 rate limits seamlessly.",
         "tags": ["web-apps", "infrastructure", "harnesses", "cloudflare"],
         "status": "live",
@@ -243,7 +236,7 @@
       {
         "id": "scratchpad-state-manager",
         "name": "Scratchpad State Manager",
-        "path": "scratchpad-state-manager/index.html",
+        "path": "web-apps/scratchpad-state-manager/index.html",
         "description": "Maintains an isolated updating state variable across agent iterations to prevent conversation context bloat.",
         "tags": ["web-apps", "context-engineering", "memory", "loops"],
         "status": "live",
@@ -268,8 +261,7 @@
       tools.forEach(tool => {
         const card = document.createElement('a');
         card.className = 'tool-card';
-        // Construct relative URL dynamically based on host location
-        card.href = BASE_PATH.endsWith('web-apps/') ? `./${tool.path}` : `./web-apps/${tool.path}`;
+        card.href = `./${tool.path}`;
 
         card.innerHTML = `
           <div>
