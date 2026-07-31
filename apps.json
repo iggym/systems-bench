@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-07-30",
+  "lastUpdated": "2026-07-31",
   "apps": [
     {
       "id": "meter-shock",
@@ -29,52 +29,211 @@
       "dateAdded": "2026-07-30"
     },
     {
-  "id": "ai-infra-router",
-  "name": "AI Infra Router & SOW Generator",
-  "url": "web-apps/ai-infra-router/index.html",
-  "description": "Deterministic decision engine to optimize MLOps routing, estimate GPU vs API costs, and scrub PII client-side.",
-  "tags": ["mlops", "architecture", "calculator"],
-  "status": "live",
-  "dateAdded": "2026-07-30"
-  },
-  
-  {
-    "id": "jeff-dean-latency-capacity-profiler",
-    "name": "Jeff Dean Latency & Capacity Profiler",
-    "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
-    "description": "Perform back-of-the-envelope capacity calculations and identify system bottlenecks using standard hardware latency metrics.",
-    "tags": ["diagnostic", "capacity-planning", "performance"],
-    "status": "live",
-    "dateAdded": "2026-07-31"
-  },
-  {
-    "id": "agent-hedge-request-tester",
-    "name": "Agent Hedge Request Tester",
-    "url": "web-apps/agent-hedge-request-tester/index.html",
-    "description": "Simulate speculative request hedging for AI agents to benchmark and minimize P99 tail latency spikes.",
-    "tags": ["agent", "latency", "benchmark"],
-    "status": "live",
-    "dateAdded": "2026-07-31"
-  },
-  {
-    "id": "edgeguard-ai",
-    "name": "EdgeGuard AI",
-    "url": "web-apps/edgeguard-ai/index.html",
-    "description": "Sub-second dual-engine inference router executing primary calls via Groq with speculative fallback to Gemini Flash.",
-    "tags": ["agent", "proxy", "performance", "monetizable"],
-    "status": "live",
-    "dateAdded": "2026-07-31"
-  },{
-  "id": "ai-engineering-hub",
-  "name": "AI Engineering Tool Suite",
-  "url": "web-apps/tool-suite/index.html",
-  "description": "Unified dashboard and registry showcasing 18 high-agency client-side web tools for context engineering, loops, harnesses, and evaluations.",
-  "tags": ["dashboard", "hub", "context-engineering", "harnesses", "evaluations"],
-  "status": "live",
-  "dateAdded": "2026-07-31"
-}
-
-
-
+      "id": "ai-infra-router",
+      "name": "AI Infra Router & SOW Generator",
+      "url": "web-apps/ai-infra-router/index.html",
+      "description": "Deterministic decision engine to optimize MLOps routing, estimate GPU vs API costs, and scrub PII client-side.",
+      "tags": ["mlops", "architecture", "calculator"],
+      "status": "live",
+      "dateAdded": "2026-07-30"
+    },
+    {
+      "id": "jeff-dean-latency-capacity-profiler",
+      "name": "Jeff Dean Latency & Capacity Profiler",
+      "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
+      "description": "Perform back-of-the-envelope capacity calculations and identify system bottlenecks using standard hardware latency metrics.",
+      "tags": ["diagnostic", "capacity-planning", "performance"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "agent-hedge-request-tester",
+      "name": "Agent Hedge Request Tester",
+      "url": "web-apps/agent-hedge-request-tester/index.html",
+      "description": "Simulate speculative request hedging for AI agents to benchmark and minimize P99 tail latency spikes.",
+      "tags": ["agent", "latency", "benchmark"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "edgeguard-ai",
+      "name": "EdgeGuard AI",
+      "url": "web-apps/edgeguard-ai/index.html",
+      "description": "Sub-second dual-engine inference router executing primary calls via Groq with speculative fallback to Gemini Flash.",
+      "tags": ["agent", "proxy", "performance", "monetizable"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "ai-engineering-hub",
+      "name": "AI Engineering Tool Suite",
+      "url": "web-apps/tool-suite/index.html",
+      "description": "Unified dashboard and registry showcasing 18 high-agency client-side web tools for context engineering, loops, harnesses, and evaluations.",
+      "tags": ["dashboard", "hub", "context-engineering", "harnesses", "evaluations"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "context-compactor",
+      "name": "Context Budgeting & Compactor",
+      "url": "web-apps/context-compactor/index.html",
+      "description": "Real-time token estimation, sliding-window compaction, and lossy/lossless state pruning.",
+      "tags": ["context-engineering", "tokens"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "react-loop-visualizer",
+      "name": "ReAct Loop Visualizer",
+      "url": "web-apps/react-loop-visualizer/index.html",
+      "description": "Trace tree inspector for intermediate agent Thought -> Action -> Observation steps with step-pause controls.",
+      "tags": ["harnesses", "loops"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "mcp-schema-converter",
+      "name": "MCP Client Inspector",
+      "url": "web-apps/mcp-schema-converter/index.html",
+      "description": "Inspects and compiles tool definitions into OpenAI/Gemini JSON schemas for context injection.",
+      "tags": ["context-engineering", "mcp"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "schema-repair-engine",
+      "name": "JSON Schema Repair Loop",
+      "url": "web-apps/schema-repair-engine/index.html",
+      "description": "Validates outputs against JSON Schemas and runs targeted auto-repair iteration loops.",
+      "tags": ["harnesses", "validation"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "multi-llm-arena",
+      "name": "Multi-LLM Arena & Parallel Tester",
+      "url": "web-apps/multi-llm-arena/index.html",
+      "description": "Parallel prompt execution across Gemini and Groq with diff, TTFT, and token velocity metrics.",
+      "tags": ["evaluations", "benchmarking"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "llm-rubric-judge",
+      "name": "LLM-as-a-Judge Rubric Evaluator",
+      "url": "web-apps/llm-rubric-judge/index.html",
+      "description": "Automated multi-criteria grading with explicit chain-of-thought rationale scoring.",
+      "tags": ["evaluations", "rubrics"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "context-firewall",
+      "name": "Context Firewall & Hand-off Generator",
+      "url": "web-apps/context-firewall/index.html",
+      "description": "Strips trace noise from agent chats and builds compact state hand-off payloads.",
+      "tags": ["context-engineering", "state"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "needle-haystack-benchmarker",
+      "name": "Needle in a Haystack Benchmarker",
+      "url": "web-apps/needle-haystack-benchmarker/index.html",
+      "description": "Simulates semantic retrieval accuracy across 0%–100% context depth distributions.",
+      "tags": ["context-engineering", "evaluations"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "prompt-mutation-optimizer",
+      "name": "System Prompt Mutation Optimizer",
+      "url": "web-apps/prompt-mutation-optimizer/index.html",
+      "description": "Iteratively mutates system prompts and scores variations against target constraints.",
+      "tags": ["context-engineering", "prompts"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "hitl-gatekeeper",
+      "name": "Agentic HITL Gatekeeper",
+      "url": "web-apps/hitl-gatekeeper/index.html",
+      "description": "Human-in-the-loop review interface for agentic tool execution payload approval.",
+      "tags": ["harnesses", "hitl"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "golden-dataset-harness",
+      "name": "Golden Dataset Test Harness",
+      "url": "web-apps/golden-dataset-harness/index.html",
+      "description": "Batch test runner for JSON/CSV datasets to prevent prompt regression.",
+      "tags": ["evaluations", "testing"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "adversarial-red-teamer",
+      "name": "Adversarial Edge-Case Red-Teamer",
+      "url": "web-apps/adversarial-red-teamer/index.html",
+      "description": "Generates prompt injection, jailbreak, and malformed payload vectors against system prompts.",
+      "tags": ["evaluations", "security"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "fewshot-example-builder",
+      "name": "Few-Shot Canonical Example Builder",
+      "url": "web-apps/fewshot-example-builder/index.html",
+      "description": "Formats, tokenizes, and optimizes few-shot exemplar arrays for system prompts.",
+      "tags": ["context-engineering", "prompts"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "latency-cost-profiler",
+      "name": "Model Latency & Cost Profiler",
+      "url": "web-apps/latency-cost-profiler/index.html",
+      "description": "Calculates total cost per million tokens, generation velocity, and TTFT across providers.",
+      "tags": ["evaluations", "metrics"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "compression-ratio-benchmarker",
+      "name": "Context Compression Benchmarker",
+      "url": "web-apps/compression-ratio-benchmarker/index.html",
+      "description": "Compares semantic retention versus compression ratios across context reduction algorithms.",
+      "tags": ["context-engineering", "benchmarking"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "gan-contract-evaluator",
+      "name": "Multi-Agent GAN Contract Evaluator",
+      "url": "web-apps/gan-contract-evaluator/index.html",
+      "description": "Generator-Critique double-loop evaluator enforcing strict schema and logic contracts.",
+      "tags": ["harnesses", "evaluations"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "worker-backoff-gateway",
+      "name": "Edge Exponential Backoff Gateway",
+      "url": "web-apps/worker-backoff-gateway/index.html",
+      "description": "Simulates jittered exponential backoff and rate-limit handling for Cloudflare Worker proxies.",
+      "tags": ["harnesses", "infrastructure"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "scratchpad-state-manager",
+      "name": "Scratchpad State Manager",
+      "url": "web-apps/scratchpad-state-manager/index.html",
+      "description": "Isolates execution memory state across multi-turn agent execution loops.",
+      "tags": ["context-engineering", "loops"],
+      "status": "live",
+      "dateAdded": "2026-07-31"
+    }
   ]
 }
