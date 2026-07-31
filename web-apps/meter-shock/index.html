@@ -2,396 +2,47 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meter Shock — usage-billing shock calculator</title>
-<meta name="description" content="See the month your usage-based bill blows past what you budgeted for, before it happens.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Cost-per-Token Velocity Tracker</title>
 <style>
-  :root{
-    --bg:#0B0D0F;
-    --bg-raised:#15181B;
-    --bg-card:#111417;
-    --line:#242A2F;
-    --text:#EDEFF1;
-    --text-mute:#8B939A;
-    --accent:#E8573F;
-    --accent-soft:#3A241E;
-    --ok:#5EEAD4;
-    --radius:3px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Inter', sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit;}
-  .mono{font-family:'DM Mono', monospace;}
-  .display{font-family:'Fraunces', serif;}
-
-  header{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:18px clamp(18px, 4vw, 48px);
-    border-bottom:1px solid var(--line);
-  }
-  .back{
-    font-family:'DM Mono', monospace;
-    font-size:12px;
-    color:var(--text-mute);
-    text-decoration:none;
-    display:flex;
-    align-items:center;
-    gap:6px;
-  }
-  .back:hover{color:var(--accent);}
-  .tool-tag{
-    font-family:'DM Mono', monospace;
-    font-size:11px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:var(--text-mute);
-    border:1px solid var(--line);
-    padding:5px 10px;
-    border-radius:var(--radius);
-  }
-
-  .diagnosis{
-    padding:56px clamp(18px, 4vw, 48px) 32px;
-    border-bottom:1px solid var(--line);
-  }
-  .diagnosis .eyebrow{
-    font-family:'DM Mono', monospace;
-    font-size:11px;
-    letter-spacing:.12em;
-    text-transform:uppercase;
-    color:var(--accent);
-    margin-bottom:14px;
-  }
-  h1{
-    font-family:'Fraunces', serif;
-    font-weight:600;
-    font-size:clamp(28px, 4vw, 42px);
-    line-height:1.1;
-    margin:0 0 12px;
-  }
-  h1 span{color:var(--accent);}
-  .diagnosis p{
-    color:var(--text-mute);
-    max-width:60ch;
-    line-height:1.6;
-    margin:0;
-    font-size:15px;
-  }
-
-  main{padding:36px clamp(18px, 4vw, 48px) 80px; display:grid; grid-template-columns:340px 1fr; gap:32px;}
-  @media (max-width:860px){ main{grid-template-columns:1fr;} }
-
-  .panel{
-    background:var(--bg-card);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:24px;
-  }
-  .panel h2{
-    font-family:'DM Mono', monospace;
-    font-size:11px;
-    letter-spacing:.1em;
-    text-transform:uppercase;
-    color:var(--text-mute);
-    margin:0 0 20px;
-  }
-  .field{margin-bottom:20px;}
-  .field label{
-    display:flex;
-    justify-content:space-between;
-    font-size:13px;
-    color:var(--text-mute);
-    margin-bottom:8px;
-  }
-  .field label b{color:var(--text); font-family:'DM Mono', monospace; font-weight:500;}
-  input[type=range]{
-    width:100%;
-    accent-color:var(--accent);
-  }
-  input[type=number]{
-    width:100%;
-    background:var(--bg-raised);
-    border:1px solid var(--line);
-    color:var(--text);
-    padding:10px 12px;
-    border-radius:var(--radius);
-    font-family:'DM Mono', monospace;
-    font-size:14px;
-  }
-  input[type=number]:focus{outline:none; border-color:var(--accent);}
-
-  .chart-card{
-    background:var(--bg-card);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:28px;
-  }
-  .stat-row{
-    display:grid;
-    grid-template-columns:repeat(3, 1fr);
-    gap:16px;
-    margin-bottom:28px;
-  }
-  .stat{
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:16px;
-    background:var(--bg-raised);
-  }
-  .stat .label{font-family:'DM Mono', monospace; font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-mute); margin-bottom:8px;}
-  .stat .value{font-family:'Fraunces', serif; font-size:24px; font-weight:600;}
-  .stat.shock .value{color:var(--accent);}
-
-  .chart{
-    display:flex;
-    align-items:flex-end;
-    gap:6px;
-    height:220px;
-    border-bottom:1px solid var(--line);
-    padding-bottom:2px;
-  }
-  .bar{
-    flex:1;
-    background:var(--ok);
-    border-radius:2px 2px 0 0;
-    min-height:2px;
-    position:relative;
-    transition:height .25s ease;
-  }
-  .bar.over{background:var(--accent);}
-  .bar .mo{
-    position:absolute;
-    bottom:-20px;
-    left:0; right:0;
-    text-align:center;
-    font-family:'DM Mono', monospace;
-    font-size:9px;
-    color:var(--text-mute);
-  }
-  .threshold-line{
-    position:relative;
-  }
-  .legend{
-    display:flex;
-    gap:18px;
-    margin-top:34px;
-    font-family:'DM Mono', monospace;
-    font-size:11px;
-    color:var(--text-mute);
-  }
-  .legend span{display:flex; align-items:center; gap:6px;}
-  .dot{width:8px; height:8px; border-radius:50%;}
-
-  .paywall{
-    margin-top:28px;
-    padding:22px;
-    border:1px dashed var(--line);
-    border-radius:var(--radius);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:14px;
-  }
-  .paywall .copy{max-width:52ch;}
-  .paywall h3{font-family:'Fraunces', serif; font-size:17px; margin:0 0 6px;}
-  .paywall p{margin:0; font-size:13px; color:var(--text-mute); line-height:1.5;}
-  .cta{
-    background:var(--accent);
-    color:#0B0D0F;
-    font-family:'DM Mono', monospace;
-    font-size:12px;
-    font-weight:500;
-    text-decoration:none;
-    padding:12px 20px;
-    border-radius:var(--radius);
-    white-space:nowrap;
-  }
-  .cta:hover{opacity:.9;}
-
-  footer{
-    padding:20px clamp(18px, 4vw, 48px);
-    border-top:1px solid var(--line);
-    font-family:'DM Mono', monospace;
-    font-size:11px;
-    color:var(--text-mute);
-    display:flex;
-    justify-content:space-between;
-    flex-wrap:wrap;
-    gap:8px;
-  }
+:root{--bg:#09090b;--surface:#121215;--border:#27272a;--text:#f4f4f5;--text-muted:#a1a1aa;--accent:#3b82f6;--font-sans:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;--font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-sans);padding:2rem 1rem;}
+.container{max-width:800px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;}
+h1{font-size:1.25rem;font-weight:600;margin-bottom:0.25rem;}
+p{color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem;}
+.form-group{margin-bottom:1rem;}
+label{display:block;font-size:0.75rem;font-family:var(--font-mono);color:var(--text-muted);text-transform:uppercase;margin-bottom:0.4rem;}
+input, select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.6rem;border-radius:6px;font-size:0.85rem;}
+button{background:#1a1a1e;color:var(--text);border:1px solid var(--border);padding:0.6rem 1rem;border-radius:6px;font-size:0.85rem;cursor:pointer;width:100%;margin-top:0.5rem;}
+button:hover{border-color:var(--accent);}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.5rem;}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:1rem;text-align:center;}
+.val{font-size:1.5rem;font-weight:600;font-family:var(--font-mono);color:var(--text);margin-top:0.25rem;}
 </style>
 </head>
 <body>
-
-<header>
-  <a class="back" href="../../index.html">&larr; systems-bench</a>
-  <span class="tool-tag">#001 · billing</span>
-</header>
-
-<section class="diagnosis">
-  <div class="eyebrow mono">meter shock</div>
-  <h1>Your bill is going to cross the line <span id="shockHeadline">sooner than you think</span>.</h1>
-  <p>Usage-based pricing feels flat right up until it isn't. Set your current spend, your growth rate, and what happens once you're over a soft cap — this shows you the month it stops being fine.</p>
-</section>
-
-<main>
-  <div class="panel">
-    <h2>Inputs</h2>
-
-    <div class="field">
-      <label>Current monthly spend <b id="spendVal">$400</b></label>
-      <input type="range" id="spend" min="20" max="5000" step="10" value="400">
-    </div>
-
-    <div class="field">
-      <label>Monthly usage growth <b id="growthVal">12%</b></label>
-      <input type="range" id="growth" min="0" max="60" step="1" value="12">
-    </div>
-
-    <div class="field">
-      <label>Overage multiplier past cap <b id="overVal">2.0x</b></label>
-      <input type="range" id="over" min="10" max="50" step="1" value="20">
-    </div>
-
-    <div class="field">
-      <label>Your alert threshold</label>
-      <input type="number" id="threshold" value="1000">
-    </div>
-  </div>
-
-  <div class="chart-card">
-    <div class="stat-row">
-      <div class="stat">
-        <div class="label">Spend today</div>
-        <div class="value" id="statToday">$400</div>
-      </div>
-      <div class="stat shock">
-        <div class="label">Shock month</div>
-        <div class="value" id="statShock">Month 8</div>
-      </div>
-      <div class="stat">
-        <div class="label">12-mo overage cost</div>
-        <div class="value" id="statOverage">$0</div>
-      </div>
-    </div>
-
-    <div class="chart" id="chart"></div>
-
-    <div class="legend">
-      <span><span class="dot" style="background:var(--ok)"></span> under threshold</span>
-      <span><span class="dot" style="background:var(--accent)"></span> over threshold — overage rate applies</span>
-    </div>
-
-    <div class="paywall">
-      <div class="copy">
-        <h3>Full 24-month projection + fee-drag breakdown</h3>
-        <p>Downloadable report: month-by-month table, cumulative overage vs. a flat-rate alternative, and the renegotiation numbers to bring to your vendor.</p>
-      </div>
-      <a class="cta" href="https://buy.stripe.com/REPLACE_WITH_PAYMENT_LINK?src=meter-shock" target="_blank" rel="noopener">Unlock report — $9</a>
-    </div>
-  </div>
-</main>
-
-<footer>
-  <span>meter shock · a systems-bench tool</span>
-  <span>no data leaves your browser</span>
-</footer>
-
+<div class="container">
+<h1>Cost-per-Token Velocity Tracker</h1>
+<p>Live sliding-window budget burn estimator calculating cost-per-successful-task.</p>
+<div class="form-group"><label>Model Tier</label><select id="model"><option value="9">Claude 3.5 Sonnet ($9/M blended)</option><option value="6.25">GPT-4o ($6.25/M blended)</option></select></div>
+<div class="form-group"><label>Completed Tasks</label><input type="number" id="tasks" value="142"></div>
+<div class="form-group"><label>Total Tokens Dispatched</label><input type="number" id="tokens" value="4520000"></div>
+<button onclick="calc()">Calculate Velocity</button>
+<div class="metrics">
+<div class="card"><label>Cost / Task</label><div id="cost-task" class="val">$0.00</div></div>
+<div class="card"><label>Hourly Burn</label><div id="cost-burn" class="val">$0.00</div></div>
+</div>
+</div>
 <script>
-(function(){
-  const spendEl = document.getElementById('spend');
-  const growthEl = document.getElementById('growth');
-  const overEl = document.getElementById('over');
-  const thresholdEl = document.getElementById('threshold');
-
-  const spendVal = document.getElementById('spendVal');
-  const growthVal = document.getElementById('growthVal');
-  const overVal = document.getElementById('overVal');
-
-  const chart = document.getElementById('chart');
-  const statToday = document.getElementById('statToday');
-  const statShock = document.getElementById('statShock');
-  const statOverage = document.getElementById('statOverage');
-  const shockHeadline = document.getElementById('shockHeadline');
-
-  const MONTHS = 12;
-  const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
-
-  function project(){
-    const spend0 = parseFloat(spendEl.value);
-    const growth = parseFloat(growthEl.value) / 100;
-    const overMult = parseFloat(overEl.value) / 10;
-    const threshold = parseFloat(thresholdEl.value) || 0;
-
-    let values = [];
-    let raw = spend0;
-    let cumulativeOverage = 0;
-    let shockMonth = null;
-
-    for (let m = 0; m < MONTHS; m++){
-      if (m > 0) raw = raw * (1 + growth);
-      let billed = raw;
-      if (raw > threshold){
-        const overAmount = raw - threshold;
-        billed = threshold + overAmount * overMult;
-        cumulativeOverage += (billed - raw);
-        if (shockMonth === null) shockMonth = m + 1;
-      }
-      values.push(billed);
-    }
-    return { values, shockMonth, cumulativeOverage, spend0, threshold };
-  }
-
-  function render(){
-    const { values, shockMonth, cumulativeOverage, spend0, threshold } = project();
-    const max = Math.max(...values, threshold);
-
-    spendVal.textContent = fmt(spendEl.value);
-    growthVal.textContent = growthEl.value + '%';
-    overVal.textContent = (parseFloat(overEl.value) / 10).toFixed(1) + 'x';
-
-    statToday.textContent = fmt(spend0);
-    statShock.textContent = shockMonth ? ('Month ' + shockMonth) : 'Never (12mo)';
-    statOverage.textContent = fmt(cumulativeOverage);
-
-    shockHeadline.textContent = shockMonth
-      ? ('by month ' + shockMonth + ', if nothing changes')
-      : 'not within 12 months at this rate';
-
-    chart.innerHTML = values.map((v, i) => {
-      const h = Math.max(2, (v / max) * 180);
-      const over = v > threshold;
-      return '<div class="bar' + (over ? ' over' : '') + '" style="height:' + h + 'px">' +
-        '<span class="mo mono">M' + (i+1) + '</span>' +
-      '</div>';
-    }).join('');
-  }
-
-  [spendEl, growthEl, overEl, thresholdEl].forEach(el => el.addEventListener('input', render));
-  render();
-
-  // analytics beacon — replace with real Cloudflare Worker endpoint
-  try {
-    fetch('https://systems-bench-analytics.iggy-mw.workers.dev/beacon', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ tool: 'meter-shock', event: 'view' })
-    }).catch(()=>{});
-  } catch(e){}
-})();
+function calc() {
+    let rate = parseFloat(document.getElementById('model').value);
+    let tasks = parseFloat(document.getElementById('tasks').value) || 1;
+    let tokens = parseFloat(document.getElementById('tokens').value) || 0;
+    let total = (tokens / 1000000) * rate;
+    document.getElementById('cost-task').textContent = `$${(total/tasks).toFixed(4)}`;
+    document.getElementById('cost-burn').textContent = `$${(total*12).toFixed(2)}/hr`;
+}
+calc();
 </script>
-
 </body>
 </html>
