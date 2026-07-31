@@ -36,6 +36,37 @@
   "tags": ["mlops", "architecture", "calculator"],
   "status": "live",
   "dateAdded": "2026-07-30"
+  },
+  
+  {
+    "id": "jeff-dean-latency-capacity-profiler",
+    "name": "Jeff Dean Latency & Capacity Profiler",
+    "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
+    "description": "Perform back-of-the-envelope capacity calculations and identify system bottlenecks using standard hardware latency metrics.",
+    "tags": ["diagnostic", "capacity-planning", "performance"],
+    "status": "live",
+    "dateAdded": "2026-07-31"
+  },
+  {
+    "id": "agent-hedge-request-tester",
+    "name": "Agent Hedge Request Tester",
+    "url": "web-apps/agent-hedge-request-tester/index.html",
+    "description": "Simulate speculative request hedging for AI agents to benchmark and minimize P99 tail latency spikes.",
+    "tags": ["agent", "latency", "benchmark"],
+    "status": "live",
+    "dateAdded": "2026-07-31"
+  },
+  {
+    "id": "edgeguard-ai",
+    "name": "EdgeGuard AI",
+    "url": "web-apps/edgeguard-ai/index.html",
+    "description": "Sub-second dual-engine inference router executing primary calls via Groq with speculative fallback to Gemini Flash.",
+    "tags": ["agent", "proxy", "performance", "monetizable"],
+    "status": "live",
+    "dateAdded": "2026-07-31"
   }
+
+
+
   ]
 }
