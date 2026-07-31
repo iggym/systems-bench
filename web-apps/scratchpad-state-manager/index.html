@@ -3,40 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scratchpad State Manager — systems-bench</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Scratchpad State Manager</title>
 <style>
-  :root {
-    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
-    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
-    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
-  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
-  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
-  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
-  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
-  textarea { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; resize: none; line-height: 1.5; min-height: 160px; }
-  textarea:focus { border-color: var(--accent-tag); }
-  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
-  button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
-  button:hover { border-color: var(--accent-tag); color: var(--accent-signal); }
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem;resize:vertical}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:380px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.stat{display:inline-block;background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.78rem;margin:4px 4px 0 0}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
-<header>
-  <h1 class="title">Scratchpad State Manager</h1>
-</header>
-<main>
-  <div class="panel">
-    <div class="panel-header">Scratchpad State Registry (JSON)</div>
-    <div class="panel-body">
-      <label>Active Scratchpad Variables</label>
-      <textarea id="stateInput" spellcheck="false">{
+<h1>Scratchpad State Manager</h1>
+<p class="sub">Isolates execution memory state into a tamper-evident hand-off payload for multi-turn agent loops. Runs 100% locally.</p>
+<div class="grid">
+  <div class="card">
+    <label>Active scratchpad state (JSON)</label>
+    <textarea id="stateInput" rows="16" spellcheck="false">{
   "session_id": "sess_99482_delta",
   "intermediate_findings": [
     "Identified primary bottleneck in database connection pool.",
@@ -45,47 +40,81 @@
   "pending_tools": ["execute_migration", "verify_health_check"],
   "lock_status": "unlocked"
 }</textarea>
-      <button onclick="compileState()">Isolate & Compile State Payload</button>
-    </div>
+    <button onclick="compileState()">Compile Hand-off Payload</button>
+    <div id="compileStats"></div>
   </div>
-  <div class="panel" style="border-right: none;">
-    <div class="panel-header">
-      <span>Isolated State Hand-off</span>
-      <span id="stateStatus" style="color:var(--accent-signal)">CLEAN</span>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Hand-off payload</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
     </div>
-    <div class="panel-body">
-      <label>Compiled Handoff Manifest</label>
-      <pre id="stateOutput">Click 'Isolate & Compile State Payload' to generate agent hand-off block.</pre>
-    </div>
+    <pre id="stateOutput">Click "Compile Hand-off Payload" to generate the isolated state block.</pre>
+    <label>Tamper check — paste a received hand-off payload here</label>
+    <textarea id="verifyInput" rows="5" spellcheck="false"></textarea>
+    <button class="sec" onclick="verifyHash()">Verify Integrity</button>
+    <div id="verifyResult"></div>
   </div>
-</main>
+</div>
 <script>
-  const stateInput = document.getElementById('stateInput');
-  const stateOutput = document.getElementById('stateOutput');
-  const stateStatus = document.getElementById('stateStatus');
+const estTok = s => Math.ceil((s||'').trim().split(/\s+/).filter(Boolean).length * 1.33);
 
-  function compileState() {
-    try {
-      const state = JSON.parse(stateInput.value);
-      
-      const payload = {
-        timestamp: new Date().toISOString(),
-        isolated_scratchpad: state,
-        token_overhead: Math.ceil(JSON.stringify(state).length / 4),
-        integrity_hash: "sha256_" + Math.random().toString(36.substring(2, 10))
-      };
-
-      stateOutput.textContent = JSON.stringify(payload, null, 2);
-      stateStatus.textContent = "COMPILED";
-      stateStatus.style.color = "var(--accent-signal)";
-    } catch (e) {
-      stateStatus.textContent = "SYNTAX ERROR";
-      stateStatus.style.color = "#ff5e5e";
-      stateOutput.textContent = "Error: Invalid JSON format in scratchpad variable definitions.";
-    }
+// Real SHA-256 via WebCrypto (https/file-with-flag). Falls back to FNV-1a if Crypto.subtle is unavailable.
+async function sha256hex(str) {
+  const bytes = new TextEncoder().encode(str);
+  if (globalThis.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest('SHA-256', bytes);
+    return 'sha256_' + [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
   }
+  // FNV-1a 32-bit fallback (non-cryptographic) — clearly labeled.
+  let h = 0x811c9dc5;
+  for (const b of bytes) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; }
+  return 'fnv1a_' + h.toString(16).padStart(8,'0') + '_WEAK';
+}
 
-  compileState();
+async function compileState() {
+  const statusEl = document.getElementById('statusBadge');
+  const outEl = document.getElementById('stateOutput');
+  try {
+    const state = JSON.parse(document.getElementById('stateInput').value);
+    const canonical = JSON.stringify({ scratchpad: state }, null, 2);
+    const payload = {
+      schema_version: 2,
+      created_at: new Date().toISOString(),
+      mode: 'single_agent',
+      isolated_scratchpad: state,
+      token_overhead: estTok(canonical),
+      integrity: { algo: 'sha256', hash: await sha256hex(canonical) }
+    };
+    outEl.textContent = JSON.stringify(payload, null, 2);
+    statusEl.textContent = 'COMPILED';
+    statusEl.className = 'badge b-ok';
+    document.getElementById('compileStats').innerHTML =
+      `<span class="stat">Payload: ${canonical.length} chars</span><span class="stat">~${payload.token_overhead} tokens</span><span class="stat">${payload.integrity.algo}</span>`;
+  } catch (e) {
+    statusEl.textContent = 'SYNTAX ERROR';
+    statusEl.className = 'badge b-err';
+    outEl.textContent = 'Error: invalid JSON in scratchpad state.\n' + e.message;
+  }
+}
+
+async function verifyHash() {
+  const el = document.getElementById('verifyResult');
+  try {
+    const payload = JSON.parse(document.getElementById('verifyInput').value);
+    if (!payload.integrity || !payload.integrity.hash) throw new Error('payload has no integrity.hash');
+    const canonical = JSON.stringify({ scratchpad: payload.isolated_scratchpad }, null, 2);
+    const expected = payload.integrity.hash;
+    const algo = expected.startsWith('fnv1a_') ? 'fnv1a' : 'sha256';
+    const actual = algo === 'fnv1a'
+      ? await sha256hex(canonical).then(h => 'fnv1a_' + (parseInt(h.split('_')[1], 16)).toString(16).padStart(8,'0') + '_WEAK')
+      : await sha256hex(canonical);
+    const ok = actual === expected;
+    el.innerHTML = `<div class="badge ${ok ? 'b-ok' : 'b-err'}" style="margin-top:10px">${ok ? 'INTEGRITY OK — payload unmodified' : 'TAMPERED — hash mismatch'}</div>
+      <pre style="max-height:140px">stored: ${expected}\ncomputed: ${actual}</pre>`;
+  } catch (e) {
+    el.innerHTML = `<div class="badge b-err" style="margin-top:10px">INVALID PAYLOAD</div><p class="hint">${e.message}</p>`;
+  }
+}
 </script>
 </body>
 </html>
