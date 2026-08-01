@@ -1,6 +1,6 @@
 {
   "lastUpdated": "2026-08-01",
-  "purpose": "A workbench for evaluating, designing, and describing agentic AI systems — tools, harnesses, loops, workflows, and orchestration frameworks. Single-purpose, client-side, zero accounts. Statuses, caveats, and estimates are stated honestly: planned tools are not counted as shipped, duplicates are flagged, and no tool claims capabilities it does not have.",
+  "purpose": "A workbench for evaluating, designing, and describing agentic AI systems \u2014 tools, harnesses, loops, workflows, and orchestration frameworks. Single-purpose, client-side, zero accounts. Statuses, caveats, and estimates are stated honestly: planned tools are not counted as shipped, duplicates are flagged, and no tool claims capabilities it does not have.",
   "dimensions": [
     {
       "id": "reliability",
@@ -74,35 +74,15 @@
         "safety",
         "evaluation"
       ],
-      "notes": "Static review is labeled heuristic text analysis — not a vulnerability scan. Live probe uses substring detection and needs a Gemini key; results are indicative, not a security guarantee.",
+      "notes": "Static review is labeled heuristic text analysis \u2014 not a vulnerability scan. Live probe uses substring detection and needs a Gemini key; results are indicative, not a security guarantee.",
       "dateAdded": "2026-07-31",
       "updated": "2026-08-01"
-    },
-    {
-      "id": "agent-hedge-request-tester",
-      "name": "Agent Hedge Request Tester",
-      "url": "web-apps/agent-hedge-request-tester/index.html",
-      "description": "Monte Carlo simulation comparing plain vs speculative-hedged requests on P50/P99 tail latency, and reporting the extra-request overhead %. Transparently a model — useful for understanding the hedging trade-off, not production numbers.",
-      "tags": [
-        "agent",
-        "latency",
-        "benchmark"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "evaluate",
-      "dimensions": [
-        "reliability",
-        "evaluation"
-      ],
-      "notes": "No cancellation or correlated-failure modeling; percentiles are index approximations.",
-      "dateAdded": "2026-07-31"
     },
     {
       "id": "ai-infra-router",
       "name": "AI Infra Router & SOW Generator",
       "url": "web-apps/ai-infra-router/index.html",
-      "description": "Deterministic build-vs-buy framework with a fully transparent cost model: every assumption (managed $/M, GPU $/hr, tok/s per GPU, utilization, SRE) is an editable input, outputs include a ±30% sensitivity range, a client-side PII scrubber (email, IP, SSN, phone, keys, cards), and a labeled SOW draft template.",
+      "description": "Deterministic build-vs-buy framework with a fully transparent cost model: every assumption (managed $/M, GPU $/hr, tok/s per GPU, utilization, SRE) is an editable input, outputs include a \u00b130% sensitivity range, a client-side PII scrubber (email, IP, SSN, phone, keys, cards), and a labeled SOW draft template.",
       "tags": [
         "mlops",
         "architecture"
@@ -115,8 +95,29 @@
         "scale",
         "safety"
       ],
-      "notes": "Planning estimates only — verify against current vendor pricing. The generated SOW is a DRAFT template with open questions, not an approved specification.",
+      "notes": "Planning estimates only \u2014 verify against current vendor pricing. The generated SOW is a DRAFT template with open questions, not an approved specification.",
       "dateAdded": "2026-07-30",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "behavior-drift-monitor",
+      "name": "Agent Behavior Drift Monitor",
+      "url": "web-apps/behavior-drift-monitor/index.html",
+      "description": "Evaluates time-series metrics (behaviorSnapshot v1 schema) for baseline vs. recent drift across daily aggregates, highlighting latency and error-rate divergence.",
+      "tags": [
+        "observability",
+        "metrics",
+        "diagnostic"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability",
+        "reliability"
+      ],
+      "notes": "Runs 100% locally on user-provided behaviorSnapshot time-series data. Calculates statistical mean and deviation drift; does not connect to live monitoring backends.",
+      "dateAdded": "2026-08-01",
       "updated": "2026-08-01"
     },
     {
@@ -136,13 +137,13 @@
         "observability"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Retention is lexical coverage only — a floor, not semantic fidelity. The LLM summary row needs a Gemini key and is subject to free-tier rate limits."
+      "notes": "Retention is lexical coverage only \u2014 a floor, not semantic fidelity. The LLM summary row needs a Gemini key and is subject to free-tier rate limits."
     },
     {
       "id": "context-compactor",
       "name": "Context Budgeting & Compactor",
       "url": "web-apps/context-compactor/index.html",
-      "description": "Fits agent context into a token budget using lossless gzip, keep-newest line trimming, chat-turn trim, and consecutive-duplicate removal — each strategy with an audit of exactly what was dropped and a lexical retention estimate.",
+      "description": "Fits agent context into a token budget using lossless gzip, keep-newest line trimming, chat-turn trim, and consecutive-duplicate removal \u2014 each strategy with an audit of exactly what was dropped and a lexical retention estimate.",
       "tags": [
         "context-engineering",
         "tokens"
@@ -154,7 +155,7 @@
         "architecture",
         "observability"
       ],
-      "notes": "Token counts are heuristic estimates (words × 1.33), not model tokenizers. Retention is a lexical floor, not semantic fidelity.",
+      "notes": "Token counts are heuristic estimates (words \u00d7 1.33), not model tokenizers. Retention is a lexical floor, not semantic fidelity.",
       "dateAdded": "2026-07-31",
       "updated": "2026-08-01"
     },
@@ -181,6 +182,27 @@
       "updated": "2026-08-01"
     },
     {
+      "id": "decision-log-analyzor",
+      "name": "Decision Log Analyzer",
+      "url": "web-apps/decision-log-analyzor/index.html",
+      "description": "Parses structured decisionLog v1 schemas to evaluate agent confidence-vs-outcome calibration, identify failure hotspots by step type, and compute blended cost-per-decision.",
+      "tags": [
+        "observability",
+        "evaluations",
+        "metrics"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "observability",
+        "evaluation"
+      ],
+      "notes": "Client-side analysis of decisionLog JSON exports. Calibration accuracy and cost calculations depend entirely on the completeness of exported decision logs.",
+      "dateAdded": "2026-08-01",
+      "updated": "2026-08-01"
+    },
+    {
       "id": "edgeguard-ai",
       "name": "EdgeGuard AI",
       "url": "web-apps/edgeguard-ai/index.html",
@@ -202,26 +224,6 @@
       "updated": "2026-08-01"
     },
     {
-      "id": "eval-failure-clustering",
-      "name": "Eval Failure Clustering & Traceability",
-      "url": "web-apps/eval-failure-clustering/index.html",
-      "description": "Groups failing eval cases by error-signature similarity (Jaccard on normalized messages), surfaces dominant clusters with coverage, suggests keyword-based root causes, and traces every case → cluster → fix. Thresholds are editable and the method is stated.",
-      "tags": [
-        "evaluations",
-        "diagnostic"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "evaluate",
-      "dimensions": [
-        "evaluation",
-        "observability"
-      ],
-      "dateAdded": "2026-08-01",
-      "updated": "2026-08-01",
-      "notes": "Root-cause suggestions are keyword-rule hypotheses, not proof; similarity is Jaccard on normalized tokens. Validate clusters by reading the cases."
-    },
-    {
       "id": "fewshot-example-builder",
       "name": "Few-Shot Canonical Example Builder",
       "url": "web-apps/fewshot-example-builder/index.html",
@@ -237,14 +239,14 @@
         "architecture"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Token counts are heuristic (words × 1.33). Formats and budgets; it does not generate examples.",
+      "notes": "Token counts are heuristic (words \u00d7 1.33). Formats and budgets; it does not generate examples.",
       "updated": "2026-08-01"
     },
     {
       "id": "gan-contract-evaluator",
       "name": "JSON Schema Contract Validator",
       "url": "web-apps/gan-contract-evaluator/index.html",
-      "description": "Validates a JSON payload against a JSON Schema subset: required, type, enum, pattern, numeric bounds, string length, nested objects, array items, additionalProperties — with a JSONPath violation report. 100% local, deterministic.",
+      "description": "Validates a JSON payload against a JSON Schema subset: required, type, enum, pattern, numeric bounds, string length, nested objects, array items, additionalProperties \u2014 with a JSONPath violation report. 100% local, deterministic.",
       "tags": [
         "harnesses",
         "validation"
@@ -284,7 +286,7 @@
       "id": "governance-budget-caps",
       "name": "Governance & Budget Caps",
       "url": "web-apps/governance-budget-caps/index.html",
-      "description": "Evaluates an agent-usage log against a policy — monthly budget with warning threshold, per-model caps, forbidden actions, HITL escalation triggers, output-validation rules — and produces an enforcement decision per event (ALLOW/WARN/HITL/BLOCK/BLOCK_BUDGET), spend projections, and a violations list.",
+      "description": "Evaluates an agent-usage log against a policy \u2014 monthly budget with warning threshold, per-model caps, forbidden actions, HITL escalation triggers, output-validation rules \u2014 and produces an enforcement decision per event (ALLOW/WARN/HITL/BLOCK/BLOCK_BUDGET), spend projections, and a violations list.",
       "tags": [
         "safety",
         "governance",
@@ -300,33 +302,13 @@
       ],
       "dateAdded": "2026-08-01",
       "updated": "2026-08-01",
-      "notes": "A policy simulator — it does not enforce anything; wire the same rules into your real gateway. Regex patterns are case-insensitive."
-    },
-    {
-      "id": "hitl-gatekeeper",
-      "name": "Agentic HITL Gatekeeper",
-      "url": "web-apps/hitl-gatekeeper/index.html",
-      "description": "Policy gate for agent tool calls: regex classification auto-blocks destructive payloads, auto-approves read-only ones, and escalates mutations to a human override. Rules run locally on the payload's actual content.",
-      "tags": [
-        "harnesses",
-        "hitl"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "design",
-      "dimensions": [
-        "safety",
-        "tooling",
-        "reliability"
-      ],
-      "notes": "Regex classification is brittle — a payload containing 'get_' or 'SELECT' anywhere is classified read-only. Use for prototyping policy semantics, not as a security boundary.",
-      "dateAdded": "2026-07-31"
+      "notes": "A policy simulator \u2014 it does not enforce anything; wire the same rules into your real gateway. Regex patterns are case-insensitive."
     },
     {
       "id": "jeff-dean-latency-capacity-profiler",
       "name": "Jeff Dean Latency & Capacity Profiler",
       "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
-      "description": "Back-of-the-envelope capacity math in the spirit of 'Numbers Every Programmer Should Know': in-flight bytes (bandwidth × RTT), per-request data volume, required bandwidth vs your link, IOPS vs disk limits, a live-editable latency reference table, and a bottleneck diagnosis.",
+      "description": "Back-of-the-envelope capacity math in the spirit of 'Numbers Every Programmer Should Know': in-flight bytes (bandwidth \u00d7 RTT), per-request data volume, required bandwidth vs your link, IOPS vs disk limits, a live-editable latency reference table, and a bottleneck diagnosis.",
       "tags": [
         "diagnostic",
         "capacity-planning",
@@ -339,27 +321,7 @@
         "scale",
         "architecture"
       ],
-      "notes": "Order-of-magnitude planning figures with editable assumptions — not a benchmark. This is the capacity calculator the entry originally promised; it is now actually built.",
-      "dateAdded": "2026-07-31",
-      "updated": "2026-08-01"
-    },
-    {
-      "id": "latency-cost-profiler",
-      "name": "Model Latency & Cost Profiler (legacy duplicate)",
-      "url": "web-apps/latency-cost-profiler/index.html",
-      "description": "Older copy of the latency/cost profiler: Gemini 1.5-era pricing, hardcoded 75/25 input/output split, and a $500 efficiency threshold. Kept for reference only.",
-      "tags": [
-        "evaluations",
-        "metrics",
-        "cost"
-      ],
-      "status": "duplicate",
-      "mode": "local",
-      "focus": "operate",
-      "dimensions": [
-        "observability"
-      ],
-      "notes": "Superseded by the canonical profiler (jeff-dean-latency-capacity-profiler entry). Listed so the registry never hides what exists on disk.",
+      "notes": "Order-of-magnitude planning figures with editable assumptions \u2014 not a benchmark. This is the capacity calculator the entry originally promised; it is now actually built.",
       "dateAdded": "2026-07-31",
       "updated": "2026-08-01"
     },
@@ -401,25 +363,6 @@
       "dateAdded": "2026-07-31"
     },
     {
-      "id": "meter-shock",
-      "name": "Meter Shock",
-      "url": "web-apps/meter-shock/index.html",
-      "description": "Projects usage-based spend to month-end from today's burn rate and flags the day you cross budget, with a 7-day trailing velocity check, cost per task, and blended $/M.",
-      "tags": [
-        "diagnostic",
-        "cost"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "operate",
-      "dimensions": [
-        "observability",
-        "safety"
-      ],
-      "dateAdded": "2026-07-30",
-      "notes": "Linear extrapolation from month-to-date burn; ignores seasonality, spikes, and planned spend changes."
-    },
-    {
       "id": "multi-llm-arena",
       "name": "Multi-LLM Arena & Parallel Tester",
       "url": "web-apps/multi-llm-arena/index.html",
@@ -437,7 +380,7 @@
         "reliability"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Token counts are heuristic (words × 1.33); simulation mode uses placeholder latencies, clearly labeled."
+      "notes": "Token counts are heuristic (words \u00d7 1.33); simulation mode uses placeholder latencies, clearly labeled."
     },
     {
       "id": "needle-haystack-benchmarker",
@@ -459,26 +402,6 @@
       "dateAdded": "2026-07-31"
     },
     {
-      "id": "pipeline-rot",
-      "name": "Pipeline Rot",
-      "url": "web-apps/pipeline-rot/index.html",
-      "description": "Scores an ML/data pipeline against measured decay patterns — drift, step changes, volatility, staleness, missing data — with a weighted rot score and recommendations. Real statistics computed from your timeline, nothing fabricated.",
-      "tags": [
-        "diagnostic",
-        "mlops"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "operate",
-      "dimensions": [
-        "observability",
-        "evaluation",
-        "reliability"
-      ],
-      "dateAdded": "2026-07-30",
-      "notes": "Score weights and thresholds are heuristics — good for triage, not calibrated statistics."
-    },
-    {
       "id": "prompt-mutation-optimizer",
       "name": "System Prompt Mutation Optimizer",
       "url": "web-apps/prompt-mutation-optimizer/index.html",
@@ -494,14 +417,14 @@
         "evaluation",
         "architecture"
       ],
-      "notes": "The local score is a weighted regex checklist — an exploration aid, not a rigorous metric.",
+      "notes": "The local score is a weighted regex checklist \u2014 an exploration aid, not a rigorous metric.",
       "dateAdded": "2026-07-31"
     },
     {
       "id": "react-loop-visualizer",
       "name": "ReAct Loop Visualizer",
       "url": "web-apps/react-loop-visualizer/index.html",
-      "description": "Parses Thought → Action → Observation trace lines into a color-coded, step-through timeline for inspecting intermediate agent loop steps and spotting stuck loops.",
+      "description": "Parses Thought \u2192 Action \u2192 Observation trace lines into a color-coded, step-through timeline for inspecting intermediate agent loop steps and spotting stuck loops.",
       "tags": [
         "harnesses",
         "loops"
@@ -555,51 +478,56 @@
         "orchestration",
         "reliability"
       ],
-      "notes": "The hash is keyless — it detects accidental corruption, not malicious tampering.",
+      "notes": "The hash is keyless \u2014 it detects accidental corruption, not malicious tampering.",
       "dateAdded": "2026-07-31"
     },
     {
-      "id": "tool-suite",
-      "name": "AI Engineering Tool Suite (this hub)",
-      "url": "web-apps/tool-suite/index.html",
-      "description": "The registry hub itself, rendered from the same apps.json as the root index with focus, dimension, status, and mode filters. One source of truth; no duplicate metadata.",
+      "id": "session-cost-attributor",
+      "name": "Session Cost Attributor",
+      "url": "web-apps/session-cost-attributor/index.html",
+      "description": "Ingests session traces (agentTrace v1 schema) and builds stacked bar charts attributing spend across sessions, models, and step types (plan vs. tool vs. eval), calculating blended $/1M tokens.",
       "tags": [
-        "hub"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "describe",
-      "dimensions": [
-        "scale"
-      ],
-      "dateAdded": "2026-07-31",
-      "notes": "This hub renders apps.json directly — edit the registry data, never this page's metadata."
-    },
-    {
-      "id": "worker-backoff-gateway",
-      "name": "Edge Exponential Backoff Gateway",
-      "url": "web-apps/worker-backoff-gateway/index.html",
-      "description": "Seeded discrete-event simulation of a token-bucket rate limiter with jittered exponential backoff (full/equal/none) vs an unlimited baseline — 429s, retries, failures, wall-time, throughput, and p95.",
-      "tags": [
-        "harnesses",
-        "infrastructure"
+        "cost",
+        "observability",
+        "metrics"
       ],
       "status": "live",
       "mode": "local",
       "focus": "operate",
       "dimensions": [
-        "tooling",
-        "reliability",
-        "observability"
+        "observability",
+        "scale"
       ],
-      "dateAdded": "2026-07-31",
-      "notes": "Simulation is O(n²) in events (fine under the 20k cap); the custom tier is detected via a magic 200000 TPM value."
+      "notes": "Calculates spend attribution locally from agentTrace JSON logs. Does not connect to billing APIs or cloud provider cost explorers.",
+      "dateAdded": "2026-08-01",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "trace-inspector",
+      "name": "Agent Trace Inspector",
+      "url": "web-apps/trace-inspector/index.html",
+      "description": "Renders nested waterfall charts from agentTrace v1 JSON logs, calculates critical paths, displays span depth (plan, tool, eval, hitl), and aggregates tokens, duration, and cost.",
+      "tags": [
+        "observability",
+        "metrics",
+        "diagnostic"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability",
+        "reliability"
+      ],
+      "notes": "Runs 100% client-side. Validates and displays agentTrace v1 schema spans locally without transmitting trace telemetry to any third-party server.",
+      "dateAdded": "2026-08-01",
+      "updated": "2026-08-01"
     },
     {
       "id": "workflow-orchestration-designer",
       "name": "Workflow Orchestration Designer",
       "url": "web-apps/workflow-orchestration-designer/index.html",
-      "description": "Designs multi-step agent workflows as typed nodes (plan, act, tool, eval, HITL, handoff, end) with explicit ok/err edges, then runs a deterministic execution simulation — trace, depth, cycle detection, unreachable-node checks — and exports the spec as JSON or a Mermaid flowchart.",
+      "description": "Designs multi-step agent workflows as typed nodes (plan, act, tool, eval, HITL, handoff, end) with explicit ok/err edges, then runs a deterministic execution simulation \u2014 trace, depth, cycle detection, unreachable-node checks \u2014 and exports the spec as JSON or a Mermaid flowchart.",
       "tags": [
         "orchestration",
         "workflows"
@@ -614,26 +542,7 @@
       ],
       "dateAdded": "2026-08-01",
       "updated": "2026-08-01",
-      "notes": "Deterministic simulation of the spec — it does not execute real agents. Mermaid export is a flowchart subset; edges to missing nodes are dropped."
-    },
-    {
-      "id": "zombie-stack",
-      "name": "Zombie Stack",
-      "url": "web-apps/zombie-stack/index.html",
-      "description": "Tracks services and subscriptions by last-active date, flags zombies past an idle threshold, and totals wasted spend per month and year. Ledger persists in localStorage; CSV export.",
-      "tags": [
-        "diagnostic",
-        "cost"
-      ],
-      "status": "live",
-      "mode": "local",
-      "focus": "operate",
-      "dimensions": [
-        "observability",
-        "scale"
-      ],
-      "dateAdded": "2026-07-30",
-      "notes": "Ledger lives in localStorage (per-browser); 'wasted' math assumes cost was avoidable from the idle date onward."
+      "notes": "Deterministic simulation of the spec \u2014 it does not execute real agents. Mermaid export is a flowchart subset; edges to missing nodes are dropped."
     }
   ],
   "registryVersion": 3,
