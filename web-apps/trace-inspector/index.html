@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Trace Inspector — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.74rem;resize:vertical;height:420px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;width:100%}
+select,input[type=text]{background:#010409;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:var(--mono);font-size:.75rem}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px;border:1px solid var(--border);color:var(--muted)}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border-color:rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border-color:rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border-color:rgba(210,153,34,.4)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem}
+.stat b{color:var(--accent)}
+.timeline-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:6px;background:#010409;max-height:520px;overflow-y:auto}
+table.wf{border-collapse:collapse;width:100%;min-width:960px;font-size:.72rem;font-family:var(--mono)}
+table.wf th{position:sticky;top:0;background:#161b22;color:var(--muted);text-transform:uppercase;font-size:.6rem;letter-spacing:.08em;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;z-index:2}
+td.lbl{width:330px;min-width:330px;padding:4px 8px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td.track{position:relative;padding:4px 8px;border-bottom:1px solid rgba(48,54,61,.5);height:26px}
+.bar{position:absolute;top:5px;height:16px;border-radius:3px;opacity:.9;cursor:pointer;min-width:3px}
+.bar:hover{opacity:1;outline:1px solid #fff}
+.bar.err{outline:1px dashed var(--err)}
+.bar.cp{outline:2px solid var(--warn)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.cp-star{color:var(--warn)}
+.row-sel{background:rgba(88,166,255,.12)}
+.dur{color:var(--muted);margin-left:8px}
+.nm{color:var(--text)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.72rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:300px;overflow:auto}
+.hint{font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Agent Trace Inspector</h1>
+<p class="sub">Renders an exported agent trace — spans with parent/child nesting, timing, tokens, cost, and status — as a nested waterfall timeline. Click a row for full span details; the <span style="color:var(--warn)">★ critical path</span> is highlighted. Consumes the shared <span class="mono" style="font-family:var(--mono)">agentTrace</span> schema (see README).</p>
+<div class="layout">
+  <div class="card">
+    <label>Trace JSON (schema agentTrace v1)</label>
+    <textarea id="traceInput" spellcheck="false">{
+  "schemaVersion": 1,
+  "session": "sess_8832_07",
+  "workflow": "support-triage",
+  "spans": [
+    { "id": "s0", "parent": null, "type": "plan", "name": "session: support triage", "startedAt": "2026-08-01T10:00:00.000Z", "durationMs": 4200, "tokensIn": 2400, "tokensOut": 900, "costUsd": 0.008, "status": "ok", "attrs": { "turns": 4 } },
+    { "id": "s1", "parent": "s0", "type": "llm", "name": "classify intent (gemini-2.5-flash)", "startedAt": "2026-08-01T10:00:00.120Z", "durationMs": 620, "model": "gemini-2.5-flash", "tokensIn": 850, "tokensOut": 40, "costUsd": 0.0004, "status": "ok", "input": "My invoice #8832 was charged twice. Help?", "output": "{\"intent\":\"billing\",\"confidence\":0.92}" },
+    { "id": "s2", "parent": "s0", "type": "tool", "name": "lookup_invoice(8832)", "startedAt": "2026-08-01T10:00:01.100Z", "durationMs": 180, "model": null, "tokensIn": 0, "tokensOut": 0, "costUsd": 0.0001, "status": "ok", "attrs": { "http": 200 }, "input": "{\"id\":8832}", "output": "{\"amount\":120.00,\"status\":\"paid_twice\"}" },
+    { "id": "s3", "parent": "s0", "type": "llm", "name": "draft reply (gemini-2.5-flash)", "startedAt": "2026-08-01T10:00:01.900Z", "durationMs": 880, "model": "gemini-2.5-flash", "tokensIn": 1050, "tokensOut": 210, "costUsd": 0.0009, "status": "ok", "input": "invoice data: paid twice", "output": "I see the duplicate charge; issuing a refund." },
+    { "id": "s4", "parent": "s0", "type": "eval", "name": "refund eligibility check", "startedAt": "2026-08-01T10:00:02.900Z", "durationMs": 410, "model": "gemini-2.5-flash", "tokensIn": 300, "tokensOut": 30, "costUsd": 0.0002, "status": "ok", "output": "{\"eligible\":true}" },
+    { "id": "s5", "parent": "s0", "type": "tool", "name": "issue_refund", "startedAt": "2026-08-01T10:00:03.400Z", "durationMs": 760, "costUsd": 0.0, "status": "error", "error": "HTTP 429 rate limited", "attrs": { "retry": 1, "http": 429 } },
+    { "id": "s6", "parent": "s5", "type": "tool", "name": "issue_refund (retry)", "startedAt": "2026-08-01T10:00:04.300Z", "durationMs": 140, "costUsd": 0.0, "status": "timeout" },
+    { "id": "s7", "parent": "s0", "type": "handoff", "name": "escalate to human", "startedAt": "2026-08-01T10:00:04.600Z", "durationMs": 60, "costUsd": 0.0, "status": "ok" }
+  ]
+}</textarea>
+    <button onclick="inspect()">Inspect Trace</button>
+    <p class="hint">Schema: <span class="mono" style="font-family:var(--mono)">spans[]</span> with id, parent, type (llm|tool|loop|eval|handoff|plan|act), name, startedAt (ISO or epoch ms), durationMs, model, tokensIn/Out, costUsd, status, error, input/output, attrs. Timing = as recorded in your log; totals = computed here, not billed.</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="font-weight:700">Trace waterfall</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="filters">
+      <select id="typeSel"><option value="all">all types</option></select>
+      <select id="statusSel"><option value="all">all statuses</option></select>
+      <input type="text" id="q" placeholder="filter by name/id…" style="flex:1;min-width:120px">
+    </div>
+    <div class="timeline-wrap" id="timelineWrap">
+      <table class="wf" id="wf"></table>
+    </div>
+    <label style="margin-top:12px">Span detail (click a row)</label>
+    <pre id="detail">Click any span row to inspect it.</pre>
+    <p class="hint">Waterfall is positioned by start time with bar width ∝ duration. ★ = on the critical path (longest root→leaf chain — the part that paces your end-to-end latency). Errors are dashed-red; timeouts are hatched. A static renderer of exported traces — no live ingestion.</p>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const $ = id => document.getElementById(id);
+const TYPE_COLOR = { llm:'#58a6ff', tool:'#5eead4', loop:'#ff8a3d', eval:'#ffc857', handoff:'#b39ddb', plan:'#7db4ff', act:'#ff8a3d' };
+const TYPE_LABEL = { llm:'llm', tool:'tool', loop:'loop', eval:'eval', handoff:'handoff', plan:'plan', act:'act' };
+const fmtMs = ms => ms >= 1000 ? (ms/1000).toFixed(2) + 's' : Math.round(ms) + 'ms';
+const fmt$ = v => '$' + (v == null ? 0 : v).toFixed(4);
+
+let SPANS = [];
+let filterType = 'all', filterStatus = 'all', filterQ = '';
+
+function parseTrace() {
+  const raw = $('traceInput').value.trim();
+  if (!raw) throw new Error('paste a trace first');
+  const data = JSON.parse(raw);
+  const spans = data.spans || data; // accept bare array too
+  if (!Array.isArray(spans) || !spans.length) throw new Error('expected trace.spans[] (non-empty array)');
+  spans.forEach((s, i) => {
+    if (s.id == null) s.id = 'span_' + i;
+    s.type = TYPE_COLOR[s.type] ? s.type : 'other';
+    s.status = s.status || 'ok';
+    s.durationMs = s.durationMs == null ? 1 : Math.max(0, Number(s.durationMs));
+  });
+  return { raw: data, spans };
+}
+
+function assignTiming(spans) {
+  const byId = Object.fromEntries(spans.map(s => [s.id, s]));
+  const timed = spans.some(s => s.startedAt != null && !isNaN(Date.parse(s.startedAt)));
+  if (timed) {
+    const t0 = Math.min(...spans.map(s => Date.parse(s.startedAt)));
+    spans.forEach(s => { s.startMs = Date.parse(s.startedAt) - t0; });
+    // spans missing startedAt: place after their nearest known ancestor's start
+    spans.forEach(s => { if (s.startMs == null || isNaN(s.startMs)) { const p = byId[s.parent]; s.startMs = p ? (p.startMs + (p.durationMs || 0)) : 0; } });
+    const min = Math.min(...spans.map(s => s.startMs));
+    spans.forEach(s => s.startMs -= min);
+  } else {
+    // untimed: cumulative in DFS order
+    const children = buildChildren(spans);
+    let cursor = 0;
+    (function dfs(id) {
+      const s = byId[id];
+      s.startMs = cursor;
+      cursor += (s.durationMs || 1);
+      (children.get(id) || []).forEach(c => dfs(c.id));
+    })(null);
+  }
+}
+
+function buildChildren(spans) {
+  const children = new Map(); // null -> roots
+  const byId = Object.fromEntries(spans.map(s => [s.id, s]));
+  spans.forEach(s => {
+    const p = s.parent && byId[s.parent] ? s.parent : null;
+    if (!children.has(p)) children.set(p, []);
+    children.get(p).push(s);
+  });
+  // deterministic order: by startMs then input order
+  children.forEach(list => list.sort((a, b) => (a.startMs || 0) - (b.startMs || 0)));
+  return children;
+}
+
+function criticalPath(spans) {
+  const children = buildChildren(spans);
+  const byId = Object.fromEntries(spans.map(s => [s.id, s]));
+  const cost = {}; // id -> max duration sum from here down
+  const best = {}; // id -> child id on best path
+  (function dfs(id) {
+    const kids = children.get(id) || [];
+    kids.forEach(k => dfs(k.id));
+    let bestCost = 0, bestKid = null;
+    kids.forEach(k => { if (cost[k.id] > bestCost) { bestCost = cost[k.id]; bestKid = k.id; } });
+    if (id == null) { best[null] = bestKid; return; }
+    cost[id] = (byId[id].durationMs || 0) + bestCost;
+    best[id] = bestKid;
+  })(null);
+  const onPath = new Set();
+  let cur = best[null];
+  while (cur) { onPath.add(cur); cur = best[cur]; }
+  return onPath;
+}
+
+function renderStats(spans, totalDur) {
+  const n = spans.length;
+  const tokIn = spans.reduce((s, x) => s + (x.tokensIn || 0), 0);
+  const tokOut = spans.reduce((s, x) => s + (x.tokensOut || 0), 0);
+  const cost = spans.reduce((s, x) => s + (x.costUsd || 0), 0);
+  const errs = spans.filter(s => s.status === 'error').length;
+  const tos = spans.filter(s => s.status === 'timeout').length;
+  const types = {};
+  spans.forEach(s => types[s.type] = (types[s.type] || 0) + 1);
+  $('stats').innerHTML =
+    `<span class="stat">spans <b>${n}</b></span>` +
+    `<span class="stat">total <b>${fmtMs(totalDur)}</b></span>` +
+    `<span class="stat">tokens <b>${(tokIn + tokOut).toLocaleString()}</b> (${tokIn.toLocaleString()} in / ${tokOut.toLocaleString()} out)</span>` +
+    `<span class="stat">cost <b>${fmt$(cost)}</b></span>` +
+    `<span class="stat">errors <b style="color:var(--err)">${errs}</b> · timeouts <b style="color:var(--warn)">${tos}</b></span>` +
+    `<span class="stat">types: ${Object.entries(types).map(([t, c]) => esc(t) + '×' + c).join(' ')}</span>`;
+}
+
+function renderWaterfall(spans, totalDur, onPath) {
+  const byId = Object.fromEntries(spans.map(s => [s.id, s]));
+  const children = buildChildren(spans);
+  const W = 960;
+  const ppm = Math.min(0.9, (W - 120) / Math.max(totalDur, 1));
+  const typeSel = $('typeSel'), statusSel = $('statusSel');
+  // populate filter selects (preserve selection)
+  const types = [...new Set(spans.map(s => s.type))].sort();
+  if (!typeSel.options || typeSel.options.length === 1) types.forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; typeSel.appendChild(o); });
+  if (!statusSel.options || statusSel.options.length === 1) ['ok','error','timeout'].forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; statusSel.appendChild(o); });
+
+  const filtered = spans.filter(s =>
+    (filterType === 'all' || s.type === filterType) &&
+    (filterStatus === 'all' || s.status === filterStatus) &&
+    (!filterQ || (s.name || '').toLowerCase().includes(filterQ) || s.id.toLowerCase().includes(filterQ)));
+
+  const rows = [];
+  (function dfs(id, depth) {
+    (children.get(id) || []).forEach(s => {
+      const visible = filtered.includes(s);
+      if (!visible) { dfs(s.id, depth); return; } // recurse into children even if this row is hidden
+      const color = TYPE_COLOR[s.type] || '#6b7680';
+      const cp = onPath.has(s.id);
+      const left = Math.round((s.startMs || 0) * ppm);
+      const w = Math.max(3, Math.round((s.durationMs || 1) * ppm));
+      rows.push(`<tr data-id="${esc(s.id)}" data-parent="${esc(s.parent || '')}" class="wf-row${s.status === 'error' ? ' is-err' : ''}">
+        <td class="lbl" style="padding-left:${8 + depth * 16}px">
+          <span class="dot" style="background:${color}"></span>
+          ${cp ? '<span class="cp-star">★</span> ' : ''}
+          <span class="nm">${esc(s.name || s.id)}</span>
+          <span class="dur">${fmtMs(s.durationMs || 1)}${s.status !== 'ok' ? ' · ' + esc(s.status) : ''}</span>
+        </td>
+        <td class="track">
+          <div class="bar${s.status === 'error' ? ' err' : ''}${cp ? ' cp' : ''}" style="left:${left}px;width:${w}px;background:${color}" title="${esc(s.name)} · ${fmtMs(s.durationMs || 1)} · ${esc(s.status)} · ${fmt$(s.costUsd || 0)}"></div>
+        </td>
+      </tr>`);
+      dfs(s.id, depth + 1);
+    });
+  })(null, 0);
+
+  $('wf').innerHTML = `<thead><tr><th style="width:330px">span (tree order)</th><th style="min-width:620px">timeline →</th></tr></thead><tbody>${rows.join('') || '<tr><td colspan="2" class="hint">no spans match the filters</td></tr>'}</tbody>`;
+}
+
+function inspect() {
+  let parsed;
+  try { parsed = parseTrace(); }
+  catch (e) {
+    $('statusBadge').textContent = 'PARSE ERROR'; $('statusBadge').className = 'badge b-err';
+    $('detail').textContent = 'Trace error: ' + e.message;
+    return;
+  }
+  const spans = parsed.spans;
+  SPANS = spans;
+  assignTiming(spans);
+  const onPath = criticalPath(spans);
+  const t0 = Math.min(...spans.map(s => s.startMs));
+  const totalDur = Math.max(...spans.map(s => s.startMs + (s.durationMs || 1))) - t0;
+  renderStats(spans, totalDur);
+  renderWaterfall(spans, totalDur, onPath);
+  $('statusBadge').textContent = 'TRACE: ' + spans.length + ' SPANS · ' + fmtMs(totalDur);
+  $('statusBadge').className = 'badge ' + (spans.some(s => s.status === 'error') ? 'b-err' : spans.some(s => s.status === 'timeout') ? 'b-warn' : 'b-ok');
+  $('detail').textContent = 'Click any span row to inspect it.';
+}
+
+// row click → detail (guarded so the tool also loads in non-browser contexts)
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('click', e => {
+    if (!e || !e.target || typeof e.target.closest !== 'function') return;
+    const row = e.target.closest('tr[data-id]');
+    if (!row) return;
+    const span = SPANS.find(s => s.id === row.dataset.id);
+    if (!span) return;
+    if (document.querySelectorAll) document.querySelectorAll('.row-sel').forEach(r => r.classList.remove('row-sel'));
+    row.classList.add('row-sel');
+    $('detail').textContent = JSON.stringify(span, null, 2);
+  });
+}
+
+$('typeSel').addEventListener('change', e => { filterType = e.target.value; if (SPANS.length) reRender(); });
+$('statusSel').addEventListener('change', e => { filterStatus = e.target.value; if (SPANS.length) reRender(); });
+$('q').addEventListener('input', e => { filterQ = e.target.value.trim().toLowerCase(); if (SPANS.length) reRender(); });
+
+function reRender() {
+  const t0 = Math.min(...SPANS.map(s => s.startMs));
+  const totalDur = Math.max(...SPANS.map(s => s.startMs + (s.durationMs || 1))) - t0;
+  renderWaterfall(SPANS, totalDur, criticalPath(SPANS));
+}
+</script>
+</body>
+</html>
