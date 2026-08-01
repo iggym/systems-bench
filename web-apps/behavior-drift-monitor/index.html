@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Behavior Drift Monitor — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.74rem;resize:vertical;height:430px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;width:100%}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px;border:1px solid var(--border);color:var(--muted)}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border-color:rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border-color:rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border-color:rgba(210,153,34,.4)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem}
+.stat b{color:var(--accent)}
+h3.section{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:.72rem;font-family:var(--mono)}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.62rem;letter-spacing:.08em;position:sticky;top:0;background:#161b22}
+.flag-up{color:var(--err);font-weight:700}
+.flag-dn{color:var(--accent);font-weight:700}
+.flag-em{color:var(--warn);font-weight:700}
+.hint{font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Agent Behavior Drift Monitor</h1>
+<p class="sub">Detects <b style="color:var(--text)">distribution shifts in agent behavior</b> from a daily/weekly aggregate timeline — tool usage, refusal rate, error rate, response length, cost, model mix. Baseline (first half) vs recent (second half), per-metric delta, drift score, and interpretation hints. The agent-behavior analog of Pipeline Rot.</p>
+<div class="layout">
+  <div class="card">
+    <label>Aggregate timeline (behaviorSnapshot v1 — {series:[{date, metrics:{…}}]})</label>
+    <textarea id="seriesInput" spellcheck="false">{
+  "schemaVersion": 1,
+  "series": [
+    { "date": "2026-07-21", "metrics": { "calls": 1100, "toolCalls": 760, "refusalRate": 0.021, "errorRate": 0.011, "avgResponseLen": 176, "costUsd": 3.8, "flashShare": 0.74 } },
+    { "date": "2026-07-22", "metrics": { "calls": 1180, "toolCalls": 810, "refusalRate": 0.019, "errorRate": 0.013, "avgResponseLen": 182, "costUsd": 4.1, "flashShare": 0.73 } },
+    { "date": "2026-07-23", "metrics": { "calls": 1240, "toolCalls": 860, "refusalRate": 0.022, "errorRate": 0.010, "avgResponseLen": 170, "costUsd": 4.0, "flashShare": 0.75 } },
+    { "date": "2026-07-24", "metrics": { "calls": 1190, "toolCalls": 820, "refusalRate": 0.020, "errorRate": 0.012, "avgResponseLen": 179, "costUsd": 3.9, "flashShare": 0.74 } },
+    { "date": "2026-07-25", "metrics": { "calls": 1310, "toolCalls": 960, "refusalRate": 0.038, "errorRate": 0.024, "avgResponseLen": 205, "costUsd": 5.2, "flashShare": 0.69 } },
+    { "date": "2026-07-26", "metrics": { "calls": 1390, "toolCalls": 1020, "refusalRate": 0.041, "errorRate": 0.028, "avgResponseLen": 214, "costUsd": 5.8, "flashShare": 0.66 } },
+    { "date": "2026-07-27", "metrics": { "calls": 1340, "toolCalls": 990, "refusalRate": 0.044, "errorRate": 0.031, "avgResponseLen": 221, "costUsd": 6.1, "flashShare": 0.62 } },
+    { "date": "2026-07-28", "metrics": { "calls": 1420, "toolCalls": 1080, "refusalRate": 0.047, "errorRate": 0.035, "avgResponseLen": 230, "costUsd": 6.7, "flashShare": 0.58 } }
+  ]
+}</textarea>
+    <div>
+      <label style="display:inline-block;margin:8px 8px 0 0">Drift threshold (fraction)</label>
+      <input type="number" id="threshold" value="0.15" step="0.05" style="width:80px;background:#010409;border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;font-family:var(--mono);font-size:.8rem">
+      <button onclick="detectDrift()" style="display:inline-block;width:auto;margin-left:8px">Detect Drift</button>
+    </div>
+    <p class="hint">Schema: <span class="mono" style="font-family:var(--mono)">series[]</span> of {date, metrics:{key: number}}. Keys must be consistent across rows; rates should be 0–1. Baseline = first half of points, recent = second half. Relative change below the threshold is ignored; a metric that goes from zero to non-zero is flagged "emerged".</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="font-weight:700">Drift report</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <div class="stats" id="stats"></div>
+    <h3 class="section">per-metric drift (baseline vs recent)</h3><div id="tblDrift"></div>
+    <h3 class="section">top changes &amp; interpretation</h3><div id="tblTop"></div>
+    <p class="hint">Score weights all flagged metrics equally; thresholds are heuristics — treat flags as "go look", not verdicts. Half-split ignores seasonality; a step change inside the window can split oddly. Interpretation hints are keyword-based on the metric name.</p>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const $ = id => document.getElementById(id);
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+const fmt = v => Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : (Math.round(v * 1000) / 1000).toString();
+
+const INTERPRET = [
+  [/refus/i, 'refusal-rate shift — check policy changes, instruction hierarchy, or safety over-triggering'],
+  [/error/i, 'error-rate shift — reliability event, upstream outage, or degraded model'],
+  [/cost/i, 'cost shift — volume up, pricier model mix, or loop amplification'],
+  [/latenc|ttft|p95|p99/i, 'latency shift — capacity or provider behavior'],
+  [/token|length|response|len/i, 'output-size shift — prompt/format drift or verbose regression'],
+  [/tool|call/i, 'tool-usage shift — routing or planning changes'],
+  [/share|rate|fraction|ratio/i, 'distribution shift — check recent deploys or model routing'],
+];
+
+function parseSeries() {
+  const raw = $('seriesInput').value.trim();
+  if (!raw) throw new Error('paste a series first');
+  const data = JSON.parse(raw);
+  const arr = Array.isArray(data) ? data : data.series;
+  if (!Array.isArray(arr) || arr.length < 2) throw new Error('expected {series:[…]} with ≥ 2 points');
+  return arr;
+}
+
+function detectDrift() {
+  const badge = $('statusBadge');
+  let series;
+  try { series = parseSeries(); }
+  catch (e) {
+    badge.textContent = 'PARSE ERROR'; badge.className = 'badge b-err';
+    $('tblDrift').innerHTML = '<p class="hint">' + esc(e.message) + '</p>';
+    return;
+  }
+  const thresh = parseFloat($('threshold').value) || 0.15;
+  const metrics = [...new Set(series.flatMap(s => Object.keys(s.metrics || {})))];
+  const half = Math.floor(series.length / 2) || 1;
+  const base = series.slice(0, half), recent = series.slice(half);
+
+  const rows = metrics.map(name => {
+    const b = base.map(s => s.metrics[name]).filter(v => v != null && !isNaN(v));
+    const r = recent.map(s => s.metrics[name]).filter(v => v != null && !isNaN(v));
+    if (!b.length || !r.length) return null;
+    const bm = mean(b), rm = mean(r);
+    const delta = rm - bm;
+    const pct = Math.abs(bm) > 1e-9 ? delta / Math.abs(bm) : (rm === 0 ? 0 : Infinity);
+    let flag = null;
+    if (Math.abs(pct) === Infinity) flag = 'EMERGED';
+    else if (Math.abs(pct) >= thresh) flag = pct > 0 ? 'UP' : 'DOWN';
+    return { name, base: bm, recent: rm, delta, pct: pct === Infinity ? null : pct, flag, trend: pct > 0 ? '↑' : pct < 0 ? '↓' : '→' };
+  }).filter(Boolean);
+
+  const flagged = rows.filter(r => r.flag);
+  const score = Math.round((flagged.length / Math.max(rows.length, 1)) * 100);
+  const level = score >= 60 ? 'CRITICAL' : score >= 35 ? 'WARNING' : score >= 15 ? 'MONITOR' : 'HEALTHY';
+
+  $('stats').innerHTML =
+    `<span class="stat">points <b>${series.length}</b> (base ${half} / recent ${series.length - half})</span>` +
+    `<span class="stat">metrics <b>${rows.length}</b></span>` +
+    `<span class="stat">flagged <b style="color:var(--warn)">${flagged.length}</b></span>` +
+    `<span class="stat">drift score <b>${score}/100</b></span>`;
+
+  $('tblDrift').innerHTML = '<table><tr><th>Metric</th><th>Baseline</th><th>Recent</th><th>Δ%</th><th>Trend</th><th>Flag</th></tr>' +
+    rows.map(r => `<tr>
+      <td>${esc(r.name)}</td>
+      <td>${fmt(r.base)}</td>
+      <td>${fmt(r.recent)}</td>
+      <td>${r.pct == null ? '—' : (r.pct * 100).toFixed(0) + '%'}</td>
+      <td>${r.trend}</td>
+      <td>${r.flag === 'UP' ? '<span class="flag-up">▲ UP</span>' : r.flag === 'DOWN' ? '<span class="flag-dn">▼ DOWN</span>' : r.flag === 'EMERGED' ? '<span class="flag-em">NEW</span>' : ''}</td>
+    </tr>`).join('') + '</table>';
+
+  const top = rows.filter(r => r.flag).sort((a, b) => Math.abs(b.pct || 0) - Math.abs(a.pct || 0)).slice(0, 8);
+  $('tblTop').innerHTML = top.length
+    ? '<table><tr><th>Metric</th><th>Δ</th><th>Suggested check</th></tr>' +
+      top.map(r => {
+        const hint = INTERPRET.find(([re]) => re.test(r.name));
+        return `<tr><td>${esc(r.name)}</td><td>${r.pct == null ? 'emerged' : (r.pct * 100).toFixed(0) + '%'}</td><td class="hint">${hint ? esc(hint[1]) : 'manual review'}</td></tr>`;
+      }).join('') + '</table>'
+    : '<p class="hint">no metrics moved beyond the threshold — behavior stable.</p>';
+
+  badge.textContent = level + ' · ' + score + '/100';
+  badge.className = 'badge ' + (score >= 35 ? 'b-err' : score >= 15 ? 'b-warn' : 'b-ok');
+}
+</script>
+</body>
+</html>
