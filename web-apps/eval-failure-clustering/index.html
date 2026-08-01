@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeff Dean Latency &amp; Capacity Profiler</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1150px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+input,select{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.8rem}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;margin-top:10px;width:100%}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:560px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.72rem}
+th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--border)}
+th{color:var(--muted);text-transform:uppercase;font-size:.65rem;letter-spacing:.4px}
+th:first-child,td:first-child{text-align:left}
+</style>
+</head>
+<body>
+<h1>Jeff Dean Latency &amp; Capacity Profiler</h1>
+<p class="sub">Back-of-the-envelope capacity math in the spirit of <i>Numbers Every Programmer Should Know</i>: in-flight bytes (bandwidth × RTT), per-request data volume, required bandwidth vs your NIC, IOPS vs disk limits, and a bottleneck diagnosis. Every number is an editable assumption — the outputs are order-of-magnitude planning figures, not benchmarks.</p>
+<div class="grid">
+  <div class="card">
+    <h3 style="font-size:.95rem;margin-bottom:4px">Workload</h3>
+    <div class="row2">
+      <div><label>Read QPS</label><input type="number" id="readQps" value="5000" oninput="calc()"></div>
+      <div><label>Read size (KB)</label><input type="number" id="readKb" value="8" oninput="calc()"></div>
+    </div>
+    <div class="row2">
+      <div><label>Write QPS</label><input type="number" id="writeQps" value="800" oninput="calc()"></div>
+      <div><label>Write size (KB)</label><input type="number" id="writeKb" value="32" oninput="calc()"></div>
+    </div>
+    <div class="row2">
+      <div><label>Network RTT (ms)</label><input type="number" id="rtt" value="0.5" step="0.1" oninput="calc()"></div>
+      <div><label>Link bandwidth (Gbps)</label><input type="number" id="linkGbps" value="10" oninput="calc()"></div>
+    </div>
+    <div class="row2">
+      <div><label>Latency SLA (ms)</label><input type="number" id="sla" value="50" oninput="calc()"></div>
+      <div><label>Disk: random read IOPS (per disk)</label><input type="number" id="iopsDisk" value="100000" oninput="calc()"></div>
+    </div>
+    <h3 style="font-size:.95rem;margin:14px 0 4px">Latency reference (editable, ns unless noted)</h3>
+    <table id="refTable"></table>
+    <button onclick="resetRefs()">Reset reference table</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Capacity report</span>
+      <span id="statusBadge" class="badge b-warn">READY</span>
+    </div>
+    <pre id="report">Adjust inputs; the report recomputes live.</pre>
+    <p class="hint">In-flight data = bandwidth × RTT (Little's law: the bytes you must have in flight to keep a link busy). A link is considered "kept busy" at ≥ ~60% utilization in practice. Bottleneck rules are stated in the report — they are heuristics, not physics.</p>
+  </div>
+</div>
+<script>
+// classic latency table (ns unless noted) — Jeff Dean era, lightly updated for NVMe
+const DEFAULTS = [
+  ['L1 cache reference', 0.5, 'ns'],
+  ['L2 cache reference', 7, 'ns'],
+  ['L3 cache reference', 100, 'ns'],
+  ['RAM reference', 100, 'ns'],
+  ['NVMe SSD random read', 25000, 'ns'],
+  ['SATA SSD random read', 150000, 'ns'],
+  ['Disk seek', 10000000, 'ns'],
+  ['Read 1 MB seq from memory', 3000, 'ns'],
+  ['Read 1 MB seq from NVMe', 1000000, 'ns'],
+  ['Round trip, same datacenter', 500000, 'ns'],
+  ['Round trip, cross-continent', 150000000, 'ns'],
+];
+const fmtNs = ns => ns < 1000 ? ns + ' ns' : ns < 1e6 ? (ns/1e3).toFixed(1) + ' µs' : (ns/1e6).toFixed(ns >= 1e8 ? 0 : 1) + ' ms';
+const num = id => parseFloat(document.getElementById(id).value) || 0;
+
+function renderRefs() {
+  document.getElementById('refTable').innerHTML = '<tr><th>Operation</th><th>Latency</th></tr>' +
+    DEFAULTS.map(([name, ns, unit]) => `<tr><td>${name}</td><td>${fmtNs(ns)}</td></tr>`).join('');
+}
+function resetRefs() { renderRefs(); }
+
+function calc() {
+  const readQps = num('readQps'), readKb = num('readKb');
+  const writeQps = num('writeQps'), writeKb = num('writeKb');
+  const rttMs = num('rtt'), linkGbps = num('linkGbps'), sla = num('sla');
+  const iopsDisk = num('iopsDisk');
+
+  const rttS = rttMs / 1000;
+  const linkBps = linkGbps * 1e9;
+  const bytesInFlight = linkBps * rttS;            // Little's law
+  const readBytes = readQps * readKb * 1024;
+  const writeBytes = writeQps * writeKb * 1024;
+  const totalBytes = readBytes + writeBytes;
+  const totalQps = readQps + writeQps;
+  const requiredBps = totalBytes;
+  const util = requiredBps / linkBps;
+  const perReq = totalQps ? totalBytes / totalQps / 1024 : 0;
+  const gbps = requiredBps / 1e9;
+
+  // bottleneck heuristics
+  const issues = [];
+  if (util > 1) issues.push(`NETWORK OVERSUBSCRIBED — workload needs ${(gbps).toFixed(2)} Gbps on a ${linkGbps} Gbps link. In-flight budget is only ${(bytesInFlight/1024).toFixed(1)} KB; at ${perReq.toFixed(1)} KB/request that covers ~${Math.floor(bytesInFlight/(perReq*1024))} concurrent requests before the pipe stalls.`);
+  else if (util > 0.6) issues.push(`LINK HEAVY — ${(util*100).toFixed(0)}% of ${linkGbps} Gbps used; plan for a wider NIC or compression before adding traffic.`);
+  else issues.push(`Link healthy: ${(util*100).toFixed(1)}% of ${linkGbps} Gbps.`);
+  if (rttMs > sla) issues.push(`LATENCY SLA VIOLATION — RTT ${rttMs} ms exceeds SLA ${sla} ms before any queueing. Move the workload closer or relax the SLA.`);
+  const iopsNeeded = readQps + writeQps;
+  if (iopsNeeded > iopsDisk) issues.push(`IOPS BOUND — need ${iopsNeeded.toLocaleString()} IOPS but the disk tier caps at ${iopsDisk.toLocaleString()}. Add disks or move to a faster tier.`);
+  else if (iopsDisk > 0) issues.push(`IOPS fine: ${iopsNeeded.toLocaleString()} of ${iopsDisk.toLocaleString()} IOPS (${(iopsNeeded/iopsDisk*100).toFixed(0)}%).`);
+
+  const badge = document.getElementById('statusBadge');
+  const bad = util > 1 || rttMs > sla || iopsNeeded > iopsDisk;
+  badge.textContent = bad ? 'BOTTLENECK(S) FOUND' : 'FITS';
+  badge.className = 'badge ' + (bad ? 'b-err' : 'b-ok');
+
+  document.getElementById('report').textContent =
+`BACK-OF-ENVELOPE CAPACITY (all numbers = editable assumptions)
+
+WORKLOAD
+  reads   : ${readQps.toLocaleString()} qps × ${readKb} KB
+  writes  : ${writeQps.toLocaleString()} qps × ${writeKb} KB
+  total   : ${totalQps.toLocaleString()} qps, ${perReq.toFixed(1)} KB/req avg, ${(totalBytes/1e6).toFixed(1)} MB/s
+
+LITTLE'S LAW (in-flight bytes = bandwidth × RTT)
+  link            : ${linkGbps} Gbps (${(linkBps/1e9).toFixed(1)} GB/s)
+  RTT             : ${rttMs} ms
+  in-flight budget: ${(bytesInFlight/1024).toFixed(1)} KB ≈ ${(bytesInFlight/(perReq*1024)||0).toFixed(0)} concurrent requests
+
+REQUIRED vs AVAILABLE
+  required        : ${(requiredBps/1e6).toFixed(1)} MB/s = ${gbps.toFixed(3)} Gbps
+  utilization     : ${(util*100).toFixed(1)}% of link
+
+BOTTLENECK DIAGNOSIS
+${issues.map(i => '  - ' + i).join('\n')}
+
+CAVEAT: order-of-magnitude planning only. Real systems add protocol overhead
+(TCP/IP ~3-5%), retransmits, queueing, and read amplification. Measure in prod.
+`;
+}
+
+calc();
+renderRefs();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246deeda83c873d',t:'MTc4NTYwODU3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
