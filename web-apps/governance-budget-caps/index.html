@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Governance &amp; Budget Caps — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1150px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem}
+textarea{resize:vertical}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:430px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.b-info{background:rgba(88,166,255,.12);color:var(--accent);border:1px solid rgba(88,166,255,.4)}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.72rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.65rem;letter-spacing:.4px}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:.78rem}
+</style>
+</head>
+<body>
+<h1>Governance &amp; Budget Caps</h1>
+<p class="sub">Evaluate an agent-usage log against a policy: monthly budget with warning threshold, per-model caps, forbidden actions, HITL escalation triggers, and output-validation rules. Produces an <b style="color:var(--text)">enforcement decision for every event</b> (ALLOW / WARN / HITL / BLOCK / BLOCK_BUDGET), spend projections, and a violations list. Local, deterministic.</p>
+<div class="grid">
+  <div class="card">
+    <label>Policy (JSON)</label>
+    <textarea id="policyInput" rows="12" spellcheck="false">{
+  "name": "prod-2026-08",
+  "monthly_budget_usd": 500,
+  "warn_at_pct": 80,
+  "billing_day_of_month": 12,
+  "days_in_cycle": 30,
+  "per_model_caps_usd": { "gemini-2.5-pro": 200, "groq-llama-3.3-70b": 150 },
+  "forbidden_actions": ["DROP\\s+(TABLE|DATABASE)", "rm\\s+-rf", "DELETE\\s+FROM"],
+  "hitl_triggers": ["refund\\s*>\\s*50", "delete_account", "external_transfer"],
+  "output_validation": { "required_keys": ["status", "data"], "must_not_contain": ["BEGIN PGP", "secret"] }
+}</textarea>
+    <label>Usage/action log — JSON array of {ts, model, action, cost_usd, tokens, output?}</label>
+    <textarea id="logInput" rows="10" spellcheck="false">[
+  { "ts": "2026-08-01T10:00:00Z", "model": "gemini-2.5-flash", "action": "lookup_invoice(8832)", "cost_usd": 0.04, "tokens": 800, "output": "{\"status\":\"ok\",\"data\":{}}" },
+  { "ts": "2026-08-01T10:01:00Z", "model": "gemini-2.5-pro", "action": "refund > 50 for user 402", "cost_usd": 1.20, "tokens": 2400, "output": "{\"status\":\"pending\",\"data\":{}}" },
+  { "ts": "2026-08-01T10:02:00Z", "model": "groq-llama-3.3-70b", "action": "DELETE FROM users WHERE id=402", "cost_usd": 0.30, "tokens": 900, "output": "{\"status\":\"ok\",\"data\":{}}" },
+  { "ts": "2026-08-02T09:00:00Z", "model": "gemini-2.5-pro", "action": "summarize annual report", "cost_usd": 3.00, "tokens": 6000, "output": "{\"status\":\"ok\",\"data\":{}}" }
+]</textarea>
+    <button onclick="evaluate()">Evaluate Against Policy</button>
+    <button class="sec" onclick="exportPolicy()">Export policy JSON</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Enforcement report</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <div class="sum" id="sumStats"></div>
+    <table id="logTable"></table>
+    <pre id="detail" style="max-height:220px"></pre>
+    <p class="hint">Decision order per event: forbidden action → BLOCK; HITL trigger → HITL (requires human); per-model cap or budget cap exceeded → BLOCK_BUDGET; spend ≥ warn% → WARN; else ALLOW. Output validation (required keys / must-not-contain) is applied when <span class="mono" style="font-family:var(--mono)">output</span> is present. This is a policy simulator — wire the same rules into your gateway for real enforcement.</p>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const status = (t, cls) => { const b = document.getElementById('statusBadge'); b.textContent = t; b.className = 'badge ' + cls; };
+const $ = id => document.getElementById(id);
+
+function testAny(patterns, text) {
+  const hits = [];
+  for (const p of patterns || []) {
+    try { if (new RegExp(p, 'i').test(text || '')) hits.push(p); } catch (e) {}
+  }
+  return hits;
+}
+
+function evaluate() {
+  let policy, log;
+  try { policy = JSON.parse($('policyInput').value); } catch (e) { status('BAD POLICY', 'b-err'); return; }
+  try { log = JSON.parse($('logInput').value); } catch (e) { status('BAD LOG', 'b-err'); return; }
+  if (!Array.isArray(log)) { status('LOG NOT ARRAY', 'b-err'); return; }
+
+  const budget = policy.monthly_budget_usd || 0;
+  const warnAt = (policy.warn_at_pct || 80) / 100;
+  const day = Math.max(1, policy.billing_day_of_month || 1);
+  const dim = Math.max(day, policy.days_in_cycle || 30);
+  const perModel = policy.per_model_caps_usd || {};
+
+  let total = 0, warned = false, budgetBlocked = false;
+  const modelSpend = {};
+  const decisions = [];
+
+  for (const ev of log) {
+    const cost = ev.cost_usd || 0;
+    const model = ev.model || 'unknown';
+    const action = ev.action || '';
+    const output = ev.output || '';
+    let verdict = 'ALLOW', reason = '', rule = '';
+
+    const forb = testAny(policy.forbidden_actions, action);
+    const hitl = testAny(policy.hitl_triggers, action);
+
+    // output validation (when output present)
+    let outIssue = '';
+    if (output && policy.output_validation) {
+      const req = policy.output_validation.required_keys || [];
+      for (const k of req) { if (!output.includes(k)) { outIssue = 'missing required key "' + k + '"'; break; } }
+      if (!outIssue) {
+        for (const bad of policy.output_validation.must_not_contain || []) { if (output.includes(bad)) { outIssue = 'output contains forbidden text: ' + bad; break; } }
+      }
+    }
+
+    // per-model cap check BEFORE adding
+    const modelAfter = (modelSpend[model] || 0) + cost;
+    const capHit = perModel[model] !== undefined && modelAfter > perModel[model];
+
+    if (forb.length) { verdict = 'BLOCK'; rule = 'forbidden action: ' + forb[0]; }
+    else if (hitl.length) { verdict = 'HITL'; rule = 'escalation trigger: ' + hitl[0]; }
+    else if (outIssue) { verdict = 'BLOCK'; rule = 'output validation: ' + outIssue; }
+    else if (capHit) { verdict = 'BLOCK_BUDGET'; rule = 'model cap $' + perModel[model] + ' exceeded (' + modelAfter.toFixed(2) + ')'; budgetBlocked = true; }
+    else if (budget > 0 && total + cost > budget) { verdict = 'BLOCK_BUDGET'; rule = 'monthly budget $' + budget + ' exceeded'; budgetBlocked = true; }
+    else if (budget > 0 && total + cost > budget * warnAt) { verdict = 'WARN'; rule = 'spend ≥ ' + Math.round(warnAt * 100) + '% of budget'; warned = true; }
+
+    modelSpend[model] = modelAfter;
+    total += cost;
+    decisions.push({ ts: ev.ts || '', model, action, cost, verdict, rule });
+  }
+
+  // projection
+  const burnDay = total / day;
+  const projected = burnDay * dim;
+  const blowout = burnDay > 0 ? Math.ceil(budget / burnDay) : null;
+
+  $('sumStats').innerHTML =
+    `<span class="stat">spend: $${total.toFixed(2)}</span>` +
+    `<span class="stat">projected month-end: $${projected.toFixed(2)} ${projected > budget ? '⚠ over' : ''}</span>` +
+    `<span class="stat">blowout day: ${blowout && blowout <= dim ? blowout : 'none'}</span>` +
+    Object.entries(modelSpend).map(([m, v]) => `<span class="stat">${esc(m)}: $${v.toFixed(2)}${perModel[m] ? ' / $' + perModel[m] : ''}</span>`).join('') +
+    `<span class="stat">events: ${decisions.length} · blocked: ${decisions.filter(d => d.verdict.startsWith('BLOCK')).length}</span>`;
+
+  $('logTable').innerHTML = '<tr><th>ts</th><th>model</th><th>action</th><th>$</th><th>verdict</th><th>rule</th></tr>' +
+    decisions.map(d => `<tr>
+      <td>${esc(d.ts)}</td><td>${esc(d.model)}</td><td>${esc(d.action.slice(0, 40))}</td><td>${d.cost.toFixed(2)}</td>
+      <td><span class="badge ${d.verdict === 'ALLOW' ? 'b-ok' : d.verdict === 'WARN' ? 'b-warn' : d.verdict === 'HITL' ? 'b-info' : 'b-err'}">${d.verdict}</span></td>
+      <td>${esc(d.rule)}</td></tr>`).join('');
+
+  const blocked = decisions.filter(d => d.verdict.startsWith('BLOCK')).length;
+  const hitl = decisions.filter(d => d.verdict === 'HITL').length;
+  status((blocked ? blocked + ' BLOCKED' : 'NO BLOCKS') + ' · ' + hitl + ' HITL · $' + total.toFixed(2) + ' spent', blocked ? 'b-err' : (warned || hitl) ? 'b-warn' : 'b-ok');
+
+  $('detail').textContent =
+    'POLICY: ' + (policy.name || 'untitled') + '\n' +
+    '  budget $' + budget + ' (warn at ' + Math.round(warnAt * 100) + '%) · billing day ' + day + ' of ' + dim + '\n' +
+    '  per-model caps: ' + Object.entries(perModel).map(([m, v]) => m + '=$' + v).join(', ') + ' || none\n' +
+    '  forbidden actions: ' + (policy.forbidden_actions || []).join(' | ') + '\n' +
+    '  HITL triggers: ' + (policy.hitl_triggers || []).join(' | ') + '\n' +
+    '  output validation: required ' + (policy.output_validation ? (policy.output_validation.required_keys || []).join(',') : '—') + ' · must-not-contain ' + (policy.output_validation ? (policy.output_validation.must_not_contain || []).join(',') : '—') + '\n' +
+    '\nPROJECTION: burn $' + burnDay.toFixed(2) + '/day → $' + projected.toFixed(2) + ' month-end' + (blowout && blowout <= dim ? ' (blowout day ' + blowout + ')' : '');
+}
+
+function exportPolicy() {
+  try { JSON.parse($('policyInput').value); status('POLICY VALID — copy from left panel', 'b-ok'); }
+  catch (e) { status('BAD POLICY', 'b-err'); }
+}
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246e1a589b2873d',t:'MTc4NTYwODY4NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
