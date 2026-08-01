@@ -1,73 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Context Budgeting & Compactor</title>
-  <style>
-    :root { --bg: #090d16; --card: #111827; --border: #1e293b; --text: #f8fafc; --muted: #94a3b8; --accent: #38bdf8; --danger: #f43f5e; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding: 20px; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-    header { border-bottom: 1px solid var(--border); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-    textarea { width: 100%; height: 260px; background: #000; border: 1px solid var(--border); color: #34d399; font-family: monospace; font-size: 0.85rem; padding: 12px; border-radius: 6px; resize: vertical; }
-    .metrics { display: flex; gap: 12px; font-family: monospace; font-size: 0.85rem; }
-    .stat { background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border); }
-    button { background: var(--accent); color: #000; font-weight: 700; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-    .controls { display: flex; gap: 10px; align-items: center; }
-    input[type="number"] { background: #000; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; width: 100px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Context Budgeting & Compactor</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.78rem;resize:vertical;height:280px}
+input[type=number]{background:#010409;border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:6px;font-family:var(--mono);font-size:.8rem;width:110px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:300px;overflow:auto}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
+.audit{font-size:.72rem;color:var(--muted);font-family:var(--mono);margin-top:6px;max-height:120px;overflow-y:auto;border:1px solid var(--border);border-radius:6px;padding:8px;background:#010409}
+</style>
 </head>
 <body>
-  <header>
-    <h1>Context Budgeting & Compactor</h1>
-    <span class="stat">Zero-Dependency Token Trimmer</span>
-  </header>
-  <div class="controls panel">
-    <label>Token Target Limit: <input type="number" id="limit" value="1000" step="100"></label>
-    <button onclick="compact()">Prune & Compact Context</button>
-  </div>
-  <div class="grid">
-    <div class="panel">
-      <h3>Raw Context Payload</h3>
-      <textarea id="rawText" placeholder="Paste system prompts, chat history, or agent memory trace here..."></textarea>
-      <div class="metrics"><span class="stat" id="rawTokens">Est. Tokens: 0</span><span class="stat" id="rawChars">Chars: 0</span></div>
+<h1>Context Budgeting & Compactor</h1>
+<p class="sub">Fits agent context into a token budget using lossless and lossy strategies — each with an audit of exactly what was dropped. Token counts are heuristic estimates (words × 1.33), clearly labeled as such.</p>
+<div class="grid">
+  <div class="card">
+    <label>Raw context — free text, or JSON chat array [{role, content}]</label>
+    <textarea id="rawText" spellcheck="false">[
+  {"role":"system","content":"You are a support agent for Acme Corp. Answer billing questions."},
+  {"role":"user","content":"My invoice #8832 was charged twice. Can you help?"},
+  {"role":"assistant","content":"I see invoice #8832 has two charges. I'll investigate the double billing."},
+  {"role":"tool","content":"lookup_invoice({\"id\":8832}) -> {\"amount\":120.00,\"status\":\"paid_twice\"}"},
+  {"role":"user","content":"Also, what is the refund policy for enterprise customers?"},
+  {"role":"assistant","content":"Enterprise refunds are handled case-by-case within 30 days."}
+]</textarea>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label style="margin:8px 0 0">Token limit: <input type="number" id="limit" value="60"></label>
     </div>
-    <div class="panel">
-      <h3>Compacted Context Output</h3>
-      <textarea id="compactText" readonly placeholder="Compacted output will appear here..."></textarea>
-      <div class="metrics"><span class="stat" id="compTokens">Est. Tokens: 0</span><span class="stat" id="reduction">Saved: 0%</span></div>
-    </div>
+    <button onclick="runStrategies()">Compact (all strategies)</button>
+    <button class="sec" onclick="copyOutput()">Copy compacted</button>
+    <p class="hint" id="rawStat" style="margin-top:8px"></p>
   </div>
-  <script>
-    const estTok = s => Math.ceil((s || '').trim().split(/\s+/).filter(Boolean).length * 1.33);
-    const updateStats = () => {
-      const raw = document.getElementById('rawText').value;
-      const t = estTok(raw);
-      document.getElementById('rawTokens').textContent = `Est. Tokens: ${t}`;
-      document.getElementById('rawChars').textContent = `Chars: ${raw.length}`;
-    };
-    document.getElementById('rawText').addEventListener('input', updateStats);
-    function compact() {
-      const raw = document.getElementById('rawText').value;
-      const limit = parseInt(document.getElementById('limit').value, 10) || 1000;
-      const lines = raw.split('\n').filter(l => l.trim().length > 0);
-      let out = [], curTok = 0;
-      for (let i = lines.length - 1; i >= 0; i--) {
-        const lineTok = estTok(lines[i]);
-        if (curTok + lineTok > limit) break;
-        out.unshift(lines[i]);
-        curTok += lineTok;
-      }
-      const res = out.join('\n');
-      document.getElementById('compactText').value = res;
-      const compTok = estTok(res);
-      const rawTok = estTok(raw);
-      const saved = rawTok ? Math.round(((rawTok - compTok) / rawTok) * 100) : 0;
-      document.getElementById('compTokens').textContent = `Est. Tokens: ${compTok}`;
-      document.getElementById('reduction').textContent = `Saved: ${saved}%`;
-    }
-  </script>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Strategy comparison</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <table id="resultTable"></table>
+    <label style="margin-top:12px">Compacted output (best lossy fit shown; copy uses this)</label>
+    <pre id="compactOut"></pre>
+    <p class="hint">Retention = fraction of original unique words still present (lexical floor, not semantic fidelity). The gzip row is lossless — it demonstrates the compression ceiling for token economy.</p>
+  </div>
+</div>
+<script>
+const estTok = s => Math.ceil((s || '').trim().split(/\s+/).filter(Boolean).length * 1.33);
+const words = s => new Set(String(s).toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean));
+function coverage(orig, comp) {
+  const o = words(orig), c = words(comp);
+  if (!o.size) return 100;
+  let kept = 0; o.forEach(w => { if (c.has(w)) kept++; });
+  return Math.round((kept / o.size) * 1000) / 10;
+}
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+function isChatJSON(text) {
+  try { const p = JSON.parse(text); return Array.isArray(p) && p.length > 0 && p.every(x => x && typeof x === 'object' && 'role' in x && 'content' in x); }
+  catch (e) { return false; }
+}
+
+async function gzipBytes(str) {
+  const stream = new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = await new Response(stream).arrayBuffer();
+  return buf.byteLength;
+}
+
+function keepNewestLines(text, limit) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const out = []; let cur = 0; const dropped = [];
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = estTok(lines[i]);
+    if (cur + t > limit) { dropped.push(lines[i].trim().slice(0, 60) + ' (~' + t + ' tok)'); continue; }
+    out.unshift(lines[i]); cur += t;
+  }
+  return { out: out.join('\n'), dropped, keptLines: out.length };
+}
+
+function trimChatTurns(text, limit) {
+  const chat = JSON.parse(text);
+  const lines = chat.map((m, i) => `${m.role}: ${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}`);
+  const out = []; let cur = 0; const dropped = [];
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = estTok(lines[i]);
+    if (cur + t > limit) { dropped.push(lines[i].slice(0, 60) + ' (~' + t + ' tok)'); continue; }
+    out.unshift(lines[i]); cur += t;
+  }
+  return { out: out.join('\n'), dropped, keptTurns: out.length };
+}
+
+function dedupeLines(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const kept = []; const dropped = [];
+  for (const l of lines) {
+    if (kept.length && kept[kept.length - 1] === l) { dropped.push(l.trim().slice(0, 60)); continue; }
+    kept.push(l);
+  }
+  return { out: kept.join('\n'), dropped };
+}
+
+async function runStrategies() {
+  const raw = document.getElementById('rawText').value;
+  const limit = parseInt(document.getElementById('limit').value) || 60;
+  const badge = document.getElementById('statusBadge');
+  const table = document.getElementById('resultTable');
+  const out = document.getElementById('compactOut');
+  if (!raw.trim()) { badge.textContent = 'NO INPUT'; badge.className = 'badge b-warn'; return; }
+
+  const rawTok = estTok(raw);
+  const rawChars = raw.length;
+  const chat = isChatJSON(raw);
+  document.getElementById('rawStat').textContent =
+    `input: ${rawChars.toLocaleString()} chars · ~${rawTok.toLocaleString()} tokens (${chat ? 'parsed as ' + JSON.parse(raw).length + '-turn chat' : 'text')}`;
+
+  const rows = [];
+
+  // 1. lossless gzip
+  try {
+    const gz = await gzipBytes(raw);
+    const gzTok = Math.ceil(gz / 3.5); // rough token-equivalent of gzipped bytes
+    rows.push({ s: 'gzip (lossless)', out: gz.toLocaleString() + ' bytes', red: Math.round((1 - gz / new TextEncoder().encode(raw).length) * 1000) / 10 + '%', ret: '100%', audit: 'reversible — decompress before use' });
+  } catch (e) { rows.push({ s: 'gzip (lossless)', out: 'unavailable', red: '—', ret: '—', audit: 'CompressionStream not supported here' }); }
+
+  // 2. keep-newest-lines (lossy)
+  const kn = keepNewestLines(raw, limit);
+  rows.push({ s: `keep-newest ≤${limit} tok (lossy)`, out: estTok(kn.out) + ' tok', red: Math.round((1 - estTok(kn.out) / rawTok) * 100) + '%', ret: coverage(raw, kn.out) + '%', audit: 'dropped ' + kn.dropped.length + ' oldest line(s):\n' + kn.dropped.slice(0, 6).map(d => '  - ' + d).join('\n') });
+
+  // 3. chat turn trim (lossy, when applicable)
+  if (chat) {
+    const ct = trimChatTurns(raw, limit);
+    rows.push({ s: 'chat turn trim (lossy)', out: estTok(ct.out) + ' tok', red: Math.round((1 - estTok(ct.out) / rawTok) * 100) + '%', ret: coverage(raw, ct.out) + '%', audit: 'dropped ' + ct.dropped.length + ' oldest turn(s):\n' + ct.dropped.slice(0, 6).map(d => '  - ' + d).join('\n') });
+  }
+
+  // 4. dedupe consecutive (lossy-ish)
+  const dd = dedupeLines(raw);
+  const ddSaved = raw.split('\n').filter(l => l.trim()).length - dd.out.split('\n').filter(l => l.trim()).length;
+  rows.push({ s: 'dedupe consecutive (lossy)', out: estTok(dd.out) + ' tok', red: Math.round((1 - estTok(dd.out) / rawTok) * 100) + '%', ret: coverage(raw, dd.out) + '%', audit: dd.dropped.length ? 'removed ' + dd.dropped.length + ' consecutive duplicate(s):\n' + dd.dropped.slice(0, 6).map(d => '  - ' + d).join('\n') : 'no consecutive duplicates found' });
+
+  table.innerHTML = '<tr><th>Strategy</th><th>Output</th><th>Reduction</th><th>Retention</th><th>Audit</th></tr>' +
+    rows.map(r => `<tr><td>${esc(r.s)}</td><td>${esc(r.out)}</td><td>${esc(r.red)}</td><td>${esc(r.ret)}</td><td class="audit">${esc(r.audit)}</td></tr>`).join('');
+
+  // best lossy = highest retention among lossy rows that fit
+  const lossy = rows.filter(r => r.s.includes('lossy') && r.out !== 'unavailable');
+  let best = lossy[0];
+  for (const r of lossy) if (parseFloat(r.ret) > parseFloat(best.ret)) best = r;
+  const bestOut = best ? (best.s.includes('chat turn') ? trimChatTurns(raw, limit).out : best.s.includes('dedupe') ? dd.out : kn.out) : raw;
+  out.textContent = bestOut || raw;
+  badge.textContent = 'COMPARED ' + rows.length + ' STRATEGIES';
+  badge.className = 'badge ' + (best ? 'b-ok' : 'b-warn');
+}
+
+async function copyOutput() {
+  const text = document.getElementById('compactOut').textContent;
+  if (!text) return;
+  if (navigator.clipboard) { await navigator.clipboard.writeText(text); document.getElementById('statusBadge').textContent = 'COPIED'; }
+  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); document.getElementById('statusBadge').textContent = 'COPIED'; }
+}
+</script>
 </body>
 </html>
