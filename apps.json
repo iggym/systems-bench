@@ -1,239 +1,673 @@
 {
-  "lastUpdated": "2026-07-31",
+  "lastUpdated": "2026-08-01",
+  "purpose": "A workbench for evaluating, designing, and describing agentic AI systems — tools, harnesses, loops, workflows, and orchestration frameworks. Single-purpose, client-side, zero accounts. Statuses, caveats, and estimates are stated honestly: planned tools are not counted as shipped, duplicates are flagged, and no tool claims capabilities it does not have.",
+  "dimensions": [
+    {
+      "id": "reliability",
+      "code": "REL",
+      "label": "Reliability",
+      "description": "Deterministic behavior, repeatability, stable long-run execution, graceful degradation, clear rollback paths."
+    },
+    {
+      "id": "architecture",
+      "code": "ARC",
+      "label": "Architecture & Contracts",
+      "description": "Schemas, interfaces, domain rules, module boundaries, separation of responsibilities."
+    },
+    {
+      "id": "evaluation",
+      "code": "EVA",
+      "label": "Closed-loop Evaluation",
+      "description": "Automated scoring, feedback cycles, error clustering, traceability, continuous improvement."
+    },
+    {
+      "id": "tooling",
+      "code": "TOL",
+      "label": "Tooling Integration",
+      "description": "Explicit I/O contracts, retries, rate limits, secure action boundaries, extensibility."
+    },
+    {
+      "id": "orchestration",
+      "code": "ORC",
+      "label": "Workflow & Orchestration",
+      "description": "Planning, acting, evaluating, branching, async execution, parallelism, deterministic handoffs."
+    },
+    {
+      "id": "observability",
+      "code": "OBS",
+      "label": "Observability",
+      "description": "Distributed tracing, decision logs, cost monitoring, drift detection, transparency into agent reasoning."
+    },
+    {
+      "id": "safety",
+      "code": "SAF",
+      "label": "Safety & Governance",
+      "description": "Budget caps, forbidden actions, human-in-the-loop checkpoints, output validation, compliance boundaries."
+    },
+    {
+      "id": "scale",
+      "code": "SCL",
+      "label": "Scale & Maintainability",
+      "description": "Modular architecture, versioning, CI/CD compatibility, reproducibility, low operational overhead."
+    }
+  ],
+  "focuses": {
+    "evaluate": "Evaluate: benchmarks, evals, judges, and diagnostics",
+    "design": "Design: harnesses, schemas, context & state engineering",
+    "operate": "Operate: cost, capacity, latency, and proxy infrastructure",
+    "describe": "Describe: registries and documentation surfaces"
+  },
   "apps": [
     {
-      "id": "meter-shock",
-      "name": "Meter Shock",
-      "url": "web-apps/meter-shock/index.html",
-      "description": "See the month your usage-based bill blows past what you budgeted for, before it happens.",
-      "tags": ["diagnostic", "billing"],
+      "id": "adversarial-red-teamer",
+      "name": "Adversarial Edge-Case Red-Teamer",
+      "url": "web-apps/adversarial-red-teamer/index.html",
+      "description": "Two honest layers: a static review of the prompt text for known weak patterns (instruction hierarchy, delimiters, tool scope, refusal language, PII handling) and an optional live probe that sends attack vectors to a model with your key and reports which bypassed.",
+      "tags": [
+        "evaluations",
+        "security"
+      ],
       "status": "live",
-      "dateAdded": "2026-07-30"
-    },
-    {
-      "id": "pipeline-rot",
-      "name": "Pipeline Rot",
-      "url": "web-apps/pipeline-rot/index.html",
-      "description": "Scores a data or ML pipeline against common decay patterns and flags where silent failure is most likely.",
-      "tags": ["diagnostic", "mlops"],
-      "status": "live",
-      "dateAdded": "2026-07-30"
-    },
-    {
-      "id": "zombie-stack",
-      "name": "Zombie Stack",
-      "url": "web-apps/zombie-stack/index.html",
-      "description": "Finds subscriptions and services still running in a stack long after the workload that justified them is gone.",
-      "tags": ["diagnostic", "cost"],
-      "status": "live",
-      "dateAdded": "2026-07-30"
-    },
-    {
-      "id": "ai-infra-router",
-      "name": "AI Infra Router & SOW Generator",
-      "url": "web-apps/ai-infra-router/index.html",
-      "description": "Deterministic decision engine to optimize MLOps routing, estimate GPU vs API costs, and scrub PII client-side.",
-      "tags": ["mlops", "architecture", "calculator"],
-      "status": "live",
-      "dateAdded": "2026-07-30"
-    },
-    {
-      "id": "jeff-dean-latency-capacity-profiler",
-      "name": "Jeff Dean Latency & Capacity Profiler",
-      "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
-      "description": "Perform back-of-the-envelope capacity calculations and identify system bottlenecks using standard hardware latency metrics.",
-      "tags": ["diagnostic", "capacity-planning", "performance"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "safety",
+        "evaluation"
+      ],
+      "notes": "Static review is labeled heuristic text analysis — not a vulnerability scan. Live probe uses substring detection and needs a Gemini key; results are indicative, not a security guarantee.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
     },
     {
       "id": "agent-hedge-request-tester",
       "name": "Agent Hedge Request Tester",
       "url": "web-apps/agent-hedge-request-tester/index.html",
-      "description": "Simulate speculative request hedging for AI agents to benchmark and minimize P99 tail latency spikes.",
-      "tags": ["agent", "latency", "benchmark"],
+      "description": "Monte Carlo simulation comparing plain vs speculative-hedged requests on P50/P99 tail latency, and reporting the extra-request overhead %. Transparently a model — useful for understanding the hedging trade-off, not production numbers.",
+      "tags": [
+        "agent",
+        "latency",
+        "benchmark"
+      ],
       "status": "live",
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "reliability",
+        "evaluation"
+      ],
+      "notes": "No cancellation or correlated-failure modeling; percentiles are index approximations.",
       "dateAdded": "2026-07-31"
     },
     {
-      "id": "edgeguard-ai",
-      "name": "EdgeGuard AI",
-      "url": "web-apps/edgeguard-ai/index.html",
-      "description": "Sub-second dual-engine inference router executing primary calls via Groq with speculative fallback to Gemini Flash.",
-      "tags": ["agent", "proxy", "performance", "monetizable"],
+      "id": "ai-infra-router",
+      "name": "AI Infra Router & SOW Generator",
+      "url": "web-apps/ai-infra-router/index.html",
+      "description": "Deterministic build-vs-buy framework with a fully transparent cost model: every assumption (managed $/M, GPU $/hr, tok/s per GPU, utilization, SRE) is an editable input, outputs include a ±30% sensitivity range, a client-side PII scrubber (email, IP, SSN, phone, keys, cards), and a labeled SOW draft template.",
+      "tags": [
+        "mlops",
+        "architecture"
+      ],
       "status": "live",
-      "dateAdded": "2026-07-31"
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "architecture",
+        "scale",
+        "safety"
+      ],
+      "notes": "Planning estimates only — verify against current vendor pricing. The generated SOW is a DRAFT template with open questions, not an approved specification.",
+      "dateAdded": "2026-07-30",
+      "updated": "2026-08-01"
     },
     {
-      "id": "ai-engineering-hub",
-      "name": "AI Engineering Tool Suite",
-      "url": "web-apps/tool-suite/index.html",
-      "description": "Unified dashboard and registry showcasing 18 high-agency client-side web tools for context engineering, loops, harnesses, and evaluations.",
-      "tags": ["dashboard", "hub", "context-engineering", "harnesses", "evaluations"],
+      "id": "compression-ratio-benchmarker",
+      "name": "Context Compression Benchmarker",
+      "url": "web-apps/compression-ratio-benchmarker/index.html",
+      "description": "Compresses your actual text with gzip (lossless), keep-newest trimming, and dedup+stopword stripping; measures real ratios and lexical retention. Optional live LLM summary row with a key.",
+      "tags": [
+        "context-engineering",
+        "benchmark"
+      ],
       "status": "live",
-      "dateAdded": "2026-07-31"
+      "mode": "hybrid",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation",
+        "observability"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Retention is lexical coverage only — a floor, not semantic fidelity. The LLM summary row needs a Gemini key and is subject to free-tier rate limits."
     },
     {
       "id": "context-compactor",
       "name": "Context Budgeting & Compactor",
       "url": "web-apps/context-compactor/index.html",
-      "description": "Real-time token estimation, sliding-window compaction, and lossy/lossless state pruning.",
-      "tags": ["context-engineering", "tokens"],
+      "description": "Fits agent context into a token budget using lossless gzip, keep-newest line trimming, chat-turn trim, and consecutive-duplicate removal — each strategy with an audit of exactly what was dropped and a lexical retention estimate.",
+      "tags": [
+        "context-engineering",
+        "tokens"
+      ],
       "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "architecture",
+        "observability"
+      ],
+      "notes": "Token counts are heuristic estimates (words × 1.33), not model tokenizers. Retention is a lexical floor, not semantic fidelity.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "context-firewall",
+      "name": "Context Firewall & Hand-off Generator",
+      "url": "web-apps/context-firewall/index.html",
+      "description": "Strips trace noise from an agent chat (system echoes, tool-call internals, ISO timestamps, consecutive duplicates) and redacts PII by field policy (email, phone, IP, SSN, keys, cards), producing a compact, deterministic JSON hand-off payload with a full strip/redact audit log and SHA-256 hash.",
+      "tags": [
+        "context-engineering",
+        "state",
+        "security"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "architecture",
+        "orchestration",
+        "safety"
+      ],
+      "notes": "Redaction is regex-based; tune patterns for your own PII classes. The hash is a corruption check, not a MAC.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "edgeguard-ai",
+      "name": "EdgeGuard AI",
+      "url": "web-apps/edgeguard-ai/index.html",
+      "description": "Dual-engine hedge router: primary Groq call at t=0, Gemini Flash hedge fired only if the threshold passes, winner takes all, loser aborted via AbortController, hedge timer always cleared. Tracks aborted calls and estimated cost.",
+      "tags": [
+        "agent",
+        "proxy",
+        "performance"
+      ],
+      "status": "live",
+      "mode": "api",
+      "focus": "operate",
+      "dimensions": [
+        "orchestration",
+        "reliability"
+      ],
+      "notes": "Cost estimate assumes output at max tokens (worst case). Real APIs called from your browser with your keys.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "eval-failure-clustering",
+      "name": "Eval Failure Clustering & Traceability",
+      "url": "web-apps/eval-failure-clustering/index.html",
+      "description": "Groups failing eval cases by error-signature similarity (Jaccard on normalized messages), surfaces dominant clusters with coverage, suggests keyword-based root causes, and traces every case → cluster → fix. Thresholds are editable and the method is stated.",
+      "tags": [
+        "evaluations",
+        "diagnostic"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation",
+        "observability"
+      ],
+      "dateAdded": "2026-08-01",
+      "updated": "2026-08-01",
+      "notes": "Root-cause suggestions are keyword-rule hypotheses, not proof; similarity is Jaccard on normalized tokens. Validate clusters by reading the cases."
+    },
+    {
+      "id": "fewshot-example-builder",
+      "name": "Few-Shot Canonical Example Builder",
+      "url": "web-apps/fewshot-example-builder/index.html",
+      "description": "Formats exemplar arrays into copy-paste prompt blocks (### EXAMPLES ###, JSON, or XML) with per-example token budgeting, whole-block budget checks, exact-duplicate detection, and one-click copy.",
+      "tags": [
+        "context-engineering",
+        "prompts"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "architecture"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Token counts are heuristic (words × 1.33). Formats and budgets; it does not generate examples.",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "gan-contract-evaluator",
+      "name": "JSON Schema Contract Validator",
+      "url": "web-apps/gan-contract-evaluator/index.html",
+      "description": "Validates a JSON payload against a JSON Schema subset: required, type, enum, pattern, numeric bounds, string length, nested objects, array items, additionalProperties — with a JSONPath violation report. 100% local, deterministic.",
+      "tags": [
+        "harnesses",
+        "validation"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "architecture",
+        "safety"
+      ],
+      "notes": "Supports a documented client-side schema subset; $ref / oneOf / allOf are out of scope.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "golden-dataset-harness",
+      "name": "Golden Dataset Test Harness",
+      "url": "web-apps/golden-dataset-harness/index.html",
+      "description": "Golden-set regression runner: JSON/CSV ingest, honest local dataset lint (duplicate IDs, missing expected outputs, key coverage), then live parallel runs against Gemini with deep-diff comparison and per-case latency.",
+      "tags": [
+        "evaluations",
+        "testing"
+      ],
+      "status": "live",
+      "mode": "hybrid",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation",
+        "tooling",
+        "reliability"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Live mode is Gemini-only with a fixed concurrency of 4; no retries or cost tracking. Local lint is dataset integrity only."
+    },
+    {
+      "id": "governance-budget-caps",
+      "name": "Governance & Budget Caps",
+      "url": "web-apps/governance-budget-caps/index.html",
+      "description": "Evaluates an agent-usage log against a policy — monthly budget with warning threshold, per-model caps, forbidden actions, HITL escalation triggers, output-validation rules — and produces an enforcement decision per event (ALLOW/WARN/HITL/BLOCK/BLOCK_BUDGET), spend projections, and a violations list.",
+      "tags": [
+        "safety",
+        "governance",
+        "cost"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "safety",
+        "scale",
+        "tooling"
+      ],
+      "dateAdded": "2026-08-01",
+      "updated": "2026-08-01",
+      "notes": "A policy simulator — it does not enforce anything; wire the same rules into your real gateway. Regex patterns are case-insensitive."
+    },
+    {
+      "id": "hitl-gatekeeper",
+      "name": "Agentic HITL Gatekeeper",
+      "url": "web-apps/hitl-gatekeeper/index.html",
+      "description": "Policy gate for agent tool calls: regex classification auto-blocks destructive payloads, auto-approves read-only ones, and escalates mutations to a human override. Rules run locally on the payload's actual content.",
+      "tags": [
+        "harnesses",
+        "hitl"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "safety",
+        "tooling",
+        "reliability"
+      ],
+      "notes": "Regex classification is brittle — a payload containing 'get_' or 'SELECT' anywhere is classified read-only. Use for prototyping policy semantics, not as a security boundary.",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "jeff-dean-latency-capacity-profiler",
+      "name": "Jeff Dean Latency & Capacity Profiler",
+      "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
+      "description": "Back-of-the-envelope capacity math in the spirit of 'Numbers Every Programmer Should Know': in-flight bytes (bandwidth × RTT), per-request data volume, required bandwidth vs your link, IOPS vs disk limits, a live-editable latency reference table, and a bottleneck diagnosis.",
+      "tags": [
+        "diagnostic",
+        "capacity-planning",
+        "performance"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "scale",
+        "architecture"
+      ],
+      "notes": "Order-of-magnitude planning figures with editable assumptions — not a benchmark. This is the capacity calculator the entry originally promised; it is now actually built.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "latency-cost-profiler",
+      "name": "Model Latency & Cost Profiler (legacy duplicate)",
+      "url": "web-apps/latency-cost-profiler/index.html",
+      "description": "Older copy of the latency/cost profiler: Gemini 1.5-era pricing, hardcoded 75/25 input/output split, and a $500 efficiency threshold. Kept for reference only.",
+      "tags": [
+        "evaluations",
+        "metrics",
+        "cost"
+      ],
+      "status": "duplicate",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability"
+      ],
+      "notes": "Superseded by the canonical profiler (jeff-dean-latency-capacity-profiler entry). Listed so the registry never hides what exists on disk.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
+    },
+    {
+      "id": "llm-rubric-judge",
+      "name": "LLM-as-a-Judge Rubric Evaluator",
+      "url": "web-apps/llm-rubric-judge/index.html",
+      "description": "Grades output against your own rubric via a live Gemini judge (weighted scores with rationale), plus an honest local structural-check mode that refuses to fake rubric grades.",
+      "tags": [
+        "evaluations",
+        "rubrics"
+      ],
+      "status": "live",
+      "mode": "hybrid",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Local structural checks (JSON validity, keywords, code fences, repeated sentences) are shallow; a real rubric grade requires the live judge and a Gemini key."
+    },
+    {
+      "id": "mcp-schema-converter",
+      "name": "MCP Client Inspector",
+      "url": "web-apps/mcp-schema-converter/index.html",
+      "description": "Recursively compiles MCP-style tool definitions into OpenAI-style function schemas or Gemini FunctionDeclarations as you type, handling nested objects/arrays, enums, defaults, and required flags.",
+      "tags": [
+        "context-engineering",
+        "mcp"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "architecture",
+        "tooling"
+      ],
+      "notes": "The Gemini branch drops enums and mishandles array-of-object; input is a custom JSON shape, not raw MCP tool definitions.",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "meter-shock",
+      "name": "Meter Shock",
+      "url": "web-apps/meter-shock/index.html",
+      "description": "Projects usage-based spend to month-end from today's burn rate and flags the day you cross budget, with a 7-day trailing velocity check, cost per task, and blended $/M.",
+      "tags": [
+        "diagnostic",
+        "cost"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability",
+        "safety"
+      ],
+      "dateAdded": "2026-07-30",
+      "notes": "Linear extrapolation from month-to-date burn; ignores seasonality, spikes, and planned spend changes."
+    },
+    {
+      "id": "multi-llm-arena",
+      "name": "Multi-LLM Arena & Parallel Tester",
+      "url": "web-apps/multi-llm-arena/index.html",
+      "description": "Fires one prompt at two models in parallel (Gemini + Groq), measuring true streaming TTFT, total latency, tok/s, trigram-dice output similarity, and an LCS diff. Clearly-labeled simulation mode without keys.",
+      "tags": [
+        "evaluations",
+        "benchmark"
+      ],
+      "status": "live",
+      "mode": "hybrid",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation",
+        "observability",
+        "reliability"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Token counts are heuristic (words × 1.33); simulation mode uses placeholder latencies, clearly labeled."
+    },
+    {
+      "id": "needle-haystack-benchmarker",
+      "name": "Needle in a Haystack Benchmarker",
+      "url": "web-apps/needle-haystack-benchmarker/index.html",
+      "description": "Real retrieval sweep: embeds a needle at each context depth, queries the model, and produces a depth-recall curve with a lost-in-the-middle diagnosis. Local mode validates the harness but never fabricates recall numbers.",
+      "tags": [
+        "context-engineering",
+        "evaluations"
+      ],
+      "status": "live",
+      "mode": "hybrid",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation",
+        "observability"
+      ],
+      "notes": "Filler corpus is 20 sentences repeated; answer matching is substring-based.",
+      "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "pipeline-rot",
+      "name": "Pipeline Rot",
+      "url": "web-apps/pipeline-rot/index.html",
+      "description": "Scores an ML/data pipeline against measured decay patterns — drift, step changes, volatility, staleness, missing data — with a weighted rot score and recommendations. Real statistics computed from your timeline, nothing fabricated.",
+      "tags": [
+        "diagnostic",
+        "mlops"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability",
+        "evaluation",
+        "reliability"
+      ],
+      "dateAdded": "2026-07-30",
+      "notes": "Score weights and thresholds are heuristics — good for triage, not calibrated statistics."
+    },
+    {
+      "id": "prompt-mutation-optimizer",
+      "name": "System Prompt Mutation Optimizer",
+      "url": "web-apps/prompt-mutation-optimizer/index.html",
+      "description": "Generates deterministic prompt variants (negative constraints, delimiters, structure, compression, output format, persona) and ranks them via transparent local heuristics or a live judge leaderboard.",
+      "tags": [
+        "context-engineering",
+        "prompts"
+      ],
+      "status": "live",
+      "mode": "hybrid",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation",
+        "architecture"
+      ],
+      "notes": "The local score is a weighted regex checklist — an exploration aid, not a rigorous metric.",
       "dateAdded": "2026-07-31"
     },
     {
       "id": "react-loop-visualizer",
       "name": "ReAct Loop Visualizer",
       "url": "web-apps/react-loop-visualizer/index.html",
-      "description": "Trace tree inspector for intermediate agent Thought -> Action -> Observation steps with step-pause controls.",
-      "tags": ["harnesses", "loops"],
+      "description": "Parses Thought → Action → Observation trace lines into a color-coded, step-through timeline for inspecting intermediate agent loop steps and spotting stuck loops.",
+      "tags": [
+        "harnesses",
+        "loops"
+      ],
       "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "mcp-schema-converter",
-      "name": "MCP Client Inspector",
-      "url": "web-apps/mcp-schema-converter/index.html",
-      "description": "Inspects and compiles tool definitions into OpenAI/Gemini JSON schemas for context injection.",
-      "tags": ["context-engineering", "mcp"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "observability",
+        "orchestration"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Parses only `Label: content` lines; no JSON tool-call formatting. For debugging traces, not production telemetry."
     },
     {
       "id": "schema-repair-engine",
       "name": "JSON Schema Repair Loop",
       "url": "web-apps/schema-repair-engine/index.html",
-      "description": "Validates outputs against JSON Schemas and runs targeted auto-repair iteration loops.",
-      "tags": ["harnesses", "validation"],
+      "description": "Validates a payload against a JSON Schema subset, classifies every violation, applies targeted auto-repairs (type coercion, enum nearest-match, default insertion, extra-property stripping), then re-validates up to N passes with a complete repair log. Unresolvable violations stop the loop rather than being forced.",
+      "tags": [
+        "harnesses",
+        "validation"
+      ],
       "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "multi-llm-arena",
-      "name": "Multi-LLM Arena & Parallel Tester",
-      "url": "web-apps/multi-llm-arena/index.html",
-      "description": "Parallel prompt execution across Gemini and Groq with diff, TTFT, and token velocity metrics.",
-      "tags": ["evaluations", "benchmarking"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "llm-rubric-judge",
-      "name": "LLM-as-a-Judge Rubric Evaluator",
-      "url": "web-apps/llm-rubric-judge/index.html",
-      "description": "Automated multi-criteria grading with explicit chain-of-thought rationale scoring.",
-      "tags": ["evaluations", "rubrics"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "context-firewall",
-      "name": "Context Firewall & Hand-off Generator",
-      "url": "web-apps/context-firewall/index.html",
-      "description": "Strips trace noise from agent chats and builds compact state hand-off payloads.",
-      "tags": ["context-engineering", "state"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "needle-haystack-benchmarker",
-      "name": "Needle in a Haystack Benchmarker",
-      "url": "web-apps/needle-haystack-benchmarker/index.html",
-      "description": "Simulates semantic retrieval accuracy across 0%–100% context depth distributions.",
-      "tags": ["context-engineering", "evaluations"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "prompt-mutation-optimizer",
-      "name": "System Prompt Mutation Optimizer",
-      "url": "web-apps/prompt-mutation-optimizer/index.html",
-      "description": "Iteratively mutates system prompts and scores variations against target constraints.",
-      "tags": ["context-engineering", "prompts"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "hitl-gatekeeper",
-      "name": "Agentic HITL Gatekeeper",
-      "url": "web-apps/hitl-gatekeeper/index.html",
-      "description": "Human-in-the-loop review interface for agentic tool execution payload approval.",
-      "tags": ["harnesses", "hitl"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "golden-dataset-harness",
-      "name": "Golden Dataset Test Harness",
-      "url": "web-apps/golden-dataset-harness/index.html",
-      "description": "Batch test runner for JSON/CSV datasets to prevent prompt regression.",
-      "tags": ["evaluations", "testing"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "adversarial-red-teamer",
-      "name": "Adversarial Edge-Case Red-Teamer",
-      "url": "web-apps/adversarial-red-teamer/index.html",
-      "description": "Generates prompt injection, jailbreak, and malformed payload vectors against system prompts.",
-      "tags": ["evaluations", "security"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "fewshot-example-builder",
-      "name": "Few-Shot Canonical Example Builder",
-      "url": "web-apps/fewshot-example-builder/index.html",
-      "description": "Formats, tokenizes, and optimizes few-shot exemplar arrays for system prompts.",
-      "tags": ["context-engineering", "prompts"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "latency-cost-profiler",
-      "name": "Model Latency & Cost Profiler",
-      "url": "web-apps/latency-cost-profiler/index.html",
-      "description": "Calculates total cost per million tokens, generation velocity, and TTFT across providers.",
-      "tags": ["evaluations", "metrics"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "compression-ratio-benchmarker",
-      "name": "Context Compression Benchmarker",
-      "url": "web-apps/compression-ratio-benchmarker/index.html",
-      "description": "Compares semantic retention versus compression ratios across context reduction algorithms.",
-      "tags": ["context-engineering", "benchmarking"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "gan-contract-evaluator",
-      "name": "Multi-Agent GAN Contract Evaluator",
-      "url": "web-apps/gan-contract-evaluator/index.html",
-      "description": "Generator-Critique double-loop evaluator enforcing strict schema and logic contracts.",
-      "tags": ["harnesses", "evaluations"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
-    },
-    {
-      "id": "worker-backoff-gateway",
-      "name": "Edge Exponential Backoff Gateway",
-      "url": "web-apps/worker-backoff-gateway/index.html",
-      "description": "Simulates jittered exponential backoff and rate-limit handling for Cloudflare Worker proxies.",
-      "tags": ["harnesses", "infrastructure"],
-      "status": "live",
-      "dateAdded": "2026-07-31"
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "architecture",
+        "evaluation",
+        "reliability"
+      ],
+      "notes": "Repairs are conservative; violations without a safe repair are reported as unresolved.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-08-01"
     },
     {
       "id": "scratchpad-state-manager",
       "name": "Scratchpad State Manager",
       "url": "web-apps/scratchpad-state-manager/index.html",
-      "description": "Isolates execution memory state across multi-turn agent execution loops.",
-      "tags": ["context-engineering", "loops"],
+      "description": "Wraps agent scratchpad state into a versioned hand-off payload with a real SHA-256 integrity hash (WebCrypto) and a verify path. Runs fully locally.",
+      "tags": [
+        "context-engineering",
+        "loops",
+        "state"
+      ],
       "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "architecture",
+        "orchestration",
+        "reliability"
+      ],
+      "notes": "The hash is keyless — it detects accidental corruption, not malicious tampering.",
       "dateAdded": "2026-07-31"
+    },
+    {
+      "id": "tool-suite",
+      "name": "AI Engineering Tool Suite (this hub)",
+      "url": "web-apps/tool-suite/index.html",
+      "description": "The registry hub itself, rendered from the same apps.json as the root index with focus, dimension, status, and mode filters. One source of truth; no duplicate metadata.",
+      "tags": [
+        "hub"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "describe",
+      "dimensions": [
+        "scale"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "This hub renders apps.json directly — edit the registry data, never this page's metadata."
+    },
+    {
+      "id": "worker-backoff-gateway",
+      "name": "Edge Exponential Backoff Gateway",
+      "url": "web-apps/worker-backoff-gateway/index.html",
+      "description": "Seeded discrete-event simulation of a token-bucket rate limiter with jittered exponential backoff (full/equal/none) vs an unlimited baseline — 429s, retries, failures, wall-time, throughput, and p95.",
+      "tags": [
+        "harnesses",
+        "infrastructure"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "tooling",
+        "reliability",
+        "observability"
+      ],
+      "dateAdded": "2026-07-31",
+      "notes": "Simulation is O(n²) in events (fine under the 20k cap); the custom tier is detected via a magic 200000 TPM value."
+    },
+    {
+      "id": "workflow-orchestration-designer",
+      "name": "Workflow Orchestration Designer",
+      "url": "web-apps/workflow-orchestration-designer/index.html",
+      "description": "Designs multi-step agent workflows as typed nodes (plan, act, tool, eval, HITL, handoff, end) with explicit ok/err edges, then runs a deterministic execution simulation — trace, depth, cycle detection, unreachable-node checks — and exports the spec as JSON or a Mermaid flowchart.",
+      "tags": [
+        "orchestration",
+        "workflows"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "orchestration",
+        "architecture",
+        "reliability"
+      ],
+      "dateAdded": "2026-08-01",
+      "updated": "2026-08-01",
+      "notes": "Deterministic simulation of the spec — it does not execute real agents. Mermaid export is a flowchart subset; edges to missing nodes are dropped."
+    },
+    {
+      "id": "zombie-stack",
+      "name": "Zombie Stack",
+      "url": "web-apps/zombie-stack/index.html",
+      "description": "Tracks services and subscriptions by last-active date, flags zombies past an idle threshold, and totals wasted spend per month and year. Ledger persists in localStorage; CSV export.",
+      "tags": [
+        "diagnostic",
+        "cost"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability",
+        "scale"
+      ],
+      "dateAdded": "2026-07-30",
+      "notes": "Ledger lives in localStorage (per-browser); 'wasted' math assumes cost was avoidable from the idle date onward."
     }
+  ],
+  "registryVersion": 3,
+  "tagVocabulary": [
+    "agent",
+    "architecture",
+    "benchmark",
+    "capacity-planning",
+    "context-engineering",
+    "cost",
+    "diagnostic",
+    "evaluations",
+    "governance",
+    "harnesses",
+    "hitl",
+    "hub",
+    "infrastructure",
+    "latency",
+    "loops",
+    "mcp",
+    "metrics",
+    "mlops",
+    "observability",
+    "orchestration",
+    "performance",
+    "prompts",
+    "proxy",
+    "rubrics",
+    "safety",
+    "security",
+    "state",
+    "testing",
+    "tokens",
+    "validation",
+    "workflows"
   ]
 }
