@@ -4,87 +4,145 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Few-Shot Example Builder — systems-bench</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
-    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
-    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --radius: 4px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
-  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
-  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
-  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
-  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
-  textarea { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; resize: none; line-height: 1.5; min-height: 140px; }
-  textarea:focus { border-color: var(--accent-tag); }
-  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
-  button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
-  button:hover { border-color: var(--accent-tag); color: var(--accent-signal); }
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input,select{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.78rem}
+textarea{resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:420px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:.8rem}
 </style>
 </head>
 <body>
-<header>
-  <h1 class="title">Few-Shot Example Builder</h1>
-</header>
-<main>
-  <div class="panel">
-    <div class="panel-header">Exemplar Definitions (JSON Array)</div>
-    <div class="panel-body">
-      <label>Input Examples Array</label>
-      <textarea id="examplesInput" spellcheck="false">[
-  {
-    "input": "Turn on the living room lights.",
-    "output": "{ \"intent\": \"device_control\", \"device\": \"living_room_lights\", \"state\": \"on\" }"
-  },
-  {
-    "input": "What's the weather in Dallas?",
-    "output": "{ \"intent\": \"weather_query\", \"location\": \"Dallas, TX\" }"
-  }
+<h1>Few-Shot Canonical Example Builder</h1>
+<p class="sub">Formats exemplar arrays into copy-paste prompt blocks with per-example token budgeting (heuristic: words × 1.33), exact-duplicate detection, and format variants. It formats and budgets — it does not invent examples or "optimize" semantically.</p>
+<div class="grid">
+  <div class="card">
+    <label>Exemplars — JSON array of {input, output} (or {user, assistant})</label>
+    <textarea id="examplesInput" rows="12" spellcheck="false">[
+  { "input": "Turn on the living room lights.", "output": "{ \"intent\": \"device_control\", \"device\": \"living_room_lights\", \"state\": \"on\" }" },
+  { "input": "What's the weather in Dallas?", "output": "{ \"intent\": \"weather_query\", \"location\": \"Dallas, TX\" }" },
+  { "input": "Turn on the living room lights.", "output": "{ \"intent\": \"device_control\", \"device\": \"living_room_lights\", \"state\": \"on\" }" },
+  { "input": "Set a timer for 10 minutes.", "output": "{ \"intent\": \"timer_set\", \"duration_min\": 10 }" }
 ]</textarea>
-      <button onclick="compileExemplars()">Compile & Optimize Prompt Block</button>
+    <div class="row2">
+      <div>
+        <label>Output format</label>
+        <select id="fmtSel">
+          <option value="block">### EXAMPLES ### block</option>
+          <option value="json">JSON array (compact)</option>
+          <option value="xml">XML-style pairs</option>
+        </select>
+      </div>
+      <div>
+        <label>Token budget (whole block)</label>
+        <input type="number" id="budget" value="160">
+      </div>
     </div>
+    <button onclick="build()">Build &amp; Budget</button>
+    <button class="sec" onclick="copyOut()">Copy block</button>
   </div>
-  <div class="panel" style="border-right: none;">
-    <div class="panel-header">
-      <span>Compiled System Prompt Block</span>
-      <span id="tokenBudget" style="color:var(--accent-signal)">~0 Tokens</span>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Formatted block</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
     </div>
-    <div class="panel-body">
-      <label>Formatted Output Block</label>
-      <pre id="outputBlock">Click 'Compile & Optimize Prompt Block' to format few-shot pairs.</pre>
+    <div class="sum">
+      <span class="stat" id="sCount">examples: —</span>
+      <span class="stat" id="sTokens">tokens: —</span>
+      <span class="stat" id="sDupes">dupes: —</span>
+      <span class="stat" id="sBudget">budget: —</span>
     </div>
+    <table id="tbl"></table>
+    <pre id="outputBlock">Click "Build &amp; Budget" to format exemplar pairs.</pre>
   </div>
-</main>
+</div>
 <script>
-  const examplesInput = document.getElementById('examplesInput');
-  const outputBlock = document.getElementById('outputBlock');
-  const tokenBudget = document.getElementById('tokenBudget');
+const estTok = s => Math.ceil((s || '').trim().split(/\s+/).filter(Boolean).length * 1.33);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const status = (t, cls) => { const b = document.getElementById('statusBadge'); b.textContent = t; b.className = 'badge ' + cls; };
 
-  function compileExemplars() {
-    try {
-      const arr = JSON.parse(examplesInput.value);
-      let formatted = "### EXAMPLES ###\n\n";
+function build() {
+  const out = document.getElementById('outputBlock');
+  let arr;
+  try { arr = JSON.parse(document.getElementById('examplesInput').value); }
+  catch (e) { status('SYNTAX ERROR', 'b-err'); out.textContent = 'Invalid JSON array: ' + e.message; return; }
+  if (!Array.isArray(arr)) { status('NOT ARRAY', 'b-err'); out.textContent = 'Input must be a JSON array.'; return; }
 
-      arr.forEach((ex, idx) => {
-        formatted += `[Example ${idx + 1}]\nUser: ${ex.input}\nAssistant: ${ex.output}\n\n`;
-      });
+  const budget = parseInt(document.getElementById('budget').value) || 0;
+  const fmt = document.getElementById('fmtSel').value;
 
-      formatted += "### END EXAMPLES ###";
+  // normalize to {user, assistant}
+  const norm = arr.map((ex, i) => {
+    const user = ex.input !== undefined ? ex.input : ex.user;
+    const asst = ex.output !== undefined ? ex.output : ex.assistant;
+    return { idx: i, user: String(user ?? ''), asst: String(asst ?? ''), src: ex };
+  }).filter(x => x.user.trim() || x.asst.trim());
 
-      outputBlock.textContent = formatted;
-      const tokens = Math.ceil(formatted.length / 4);
-      tokenBudget.textContent = `~${tokens} Tokens`;
-    } catch (e) {
-      outputBlock.textContent = "Error: Invalid JSON array format for exemplars.";
-      tokenBudget.textContent = "Syntax Error";
-      tokenBudget.style.color = "#ff5e5e";
-    }
+  // exact-duplicate detection (normalized whitespace)
+  const seen = new Map();
+  const dupes = [];
+  norm.forEach(x => {
+    const key = (x.user + '\u0000' + x.asst).replace(/\s+/g, ' ').trim();
+    if (seen.has(key)) dupes.push({ kept: seen.get(key).idx, dup: x.idx });
+    else seen.set(key, x);
+  });
+
+  // format
+  let block = '';
+  if (fmt === 'block') {
+    block = '### EXAMPLES ###\n\n' +
+      norm.map((x, i) => `[Example ${i + 1}]\nUser: ${x.user}\nAssistant: ${x.asst}`).join('\n\n') +
+      '\n\n### END EXAMPLES ###';
+  } else if (fmt === 'json') {
+    block = JSON.stringify(norm.map(x => ({ input: x.user, output: x.asst })), null, 2);
+  } else {
+    block = norm.map((x, i) => `<example id="${i + 1}">\n  <user>${x.user}</user>\n  <assistant>${x.asst}</assistant>\n</example>`).join('\n');
   }
+
+  const perTok = norm.map(x => ({ i: x.idx, user: x.user, asst: x.asst, tok: estTok(x.user) + estTok(x.asst) }));
+  const total = perTok.reduce((s, x) => s + x.tok, 0);
+  const over = budget > 0 && total > budget;
+
+  document.getElementById('sCount').textContent = 'examples: ' + norm.length + ' / ' + arr.length + ' input';
+  document.getElementById('sTokens').textContent = 'tokens: ~' + total;
+  document.getElementById('sDupes').textContent = 'dupes: ' + dupes.length;
+  document.getElementById('sBudget').textContent = 'budget: ' + (budget ? (total + ' / ' + budget) : 'unset');
+
+  document.getElementById('tbl').innerHTML =
+    '<tr><th>#</th><th>Input (truncated)</th><th>~tok</th><th>Status</th></tr>' +
+    perTok.map((x, i) =>
+      `<tr><td>${i + 1}</td><td>${esc((x.user + ' → ' + x.asst).slice(0, 70))}</td><td>${x.tok}</td><td>${dupes.some(d => d.dup === x.i || d.kept === x.i) ? '<span class="badge b-warn">DUP</span>' : ''}</td></tr>`).join('');
+
+  out.textContent = block;
+  status(over ? 'OVER BUDGET by ~' + (total - budget) + ' tok' : (budget ? 'WITHIN BUDGET' : 'NO BUDGET SET'), over ? 'b-err' : 'b-ok');
+}
+
+async function copyOut() {
+  const t = document.getElementById('outputBlock').textContent;
+  if (!t || t.startsWith('Click')) return;
+  if (navigator.clipboard) { await navigator.clipboard.writeText(t); status('COPIED', 'b-ok'); }
+  else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); status('COPIED', 'b-ok'); }
+}
 </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246d2f649c84758',t:'MTc4NTYwODA4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
