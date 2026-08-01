@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Log Analyzer — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.74rem;resize:vertical;height:430px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;width:100%}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px;border:1px solid var(--border);color:var(--muted)}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border-color:rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border-color:rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border-color:rgba(210,153,34,.4)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem}
+.stat b{color:var(--accent)}
+h3.section{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:.72rem;font-family:var(--mono)}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.62rem;letter-spacing:.08em;position:sticky;top:0;background:#161b22}
+.flag{color:var(--err);font-weight:700}
+.hint{font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Decision Log Analyzer</h1>
+<p class="sub">Analyzes an agent's decision log for <b style="color:var(--text)">reasoning transparency</b>: which decisions repeat, how well self-reported confidence predicts outcomes (calibration), where failures cluster, and which decisions cost the most. Consumes the <span class="mono" style="font-family:var(--mono)">decisionLog</span> schema v1.</p>
+<div class="layout">
+  <div class="card">
+    <label>Decision log (decisionLog v1 — {decisions:[…]} or bare array)</label>
+    <textarea id="logInput" spellcheck="false">{
+  "schemaVersion": 1,
+  "session": "sess_8832_07",
+  "workflow": "support-triage",
+  "decisions": [
+    { "step": 1, "actor": "agent", "decision": "classify intent as billing", "optionsConsidered": ["billing", "account", "sales"], "rationale": "invoice + charged twice keywords", "confidence": 0.93, "outcome": "success", "latencyMs": 620, "costUsd": 0.0004 },
+    { "step": 2, "actor": "agent", "decision": "call lookup_invoice", "optionsConsidered": ["lookup_invoice", "query_billing_db"], "rationale": "need invoice record", "confidence": 0.97, "outcome": "success", "latencyMs": 180, "costUsd": 0.0001 },
+    { "step": 3, "actor": "tool", "decision": "issue_refund", "optionsConsidered": ["issue_refund", "escalate"], "rationale": "eligible per policy", "confidence": 0.95, "outcome": "failure", "latencyMs": 760, "costUsd": 0.0000, "error": "HTTP 429" },
+    { "step": 4, "actor": "agent", "decision": "retry issue_refund", "optionsConsidered": ["retry", "escalate"], "rationale": "transient 429", "confidence": 0.62, "outcome": "failure", "latencyMs": 140, "costUsd": 0.0000, "error": "timeout" },
+    { "step": 5, "actor": "agent", "decision": "escalate to human", "optionsConsidered": ["escalate", "retry again"], "rationale": "two failures", "confidence": 0.88, "outcome": "success", "latencyMs": 60, "costUsd": 0.0000 },
+    { "step": 6, "actor": "agent", "decision": "classify intent as billing", "optionsConsidered": ["billing", "account"], "rationale": "same keywords", "confidence": 0.91, "outcome": "success", "latencyMs": 590, "costUsd": 0.0004 },
+    { "step": 7, "actor": "agent", "decision": "call lookup_invoice", "optionsConsidered": ["lookup_invoice", "query_billing_db"], "rationale": "need invoice record", "confidence": 0.96, "outcome": "success", "latencyMs": 170, "costUsd": 0.0001 },
+    { "step": 8, "actor": "agent", "decision": "issue_refund", "optionsConsidered": ["issue_refund", "escalate"], "rationale": "eligible per policy", "confidence": 0.94, "outcome": "success", "latencyMs": 150, "costUsd": 0.0000 },
+    { "step": 9, "actor": "agent", "decision": "close ticket", "optionsConsidered": ["close", "ask more"], "rationale": "resolved", "confidence": 0.89, "outcome": "success", "latencyMs": 45, "costUsd": 0.0000 }
+  ]
+}</textarea>
+    <button onclick="analyze()">Analyze Decisions</button>
+    <p class="hint">Schema: <span class="mono" style="font-family:var(--mono)">decisions[]</span> with step, actor, decision, optionsConsidered, rationale, confidence (0–1), outcome (success|failure|partial), latencyMs, costUsd, error. Confidence is self-reported — calibration here measures how well that self-report tracks reality.</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="font-weight:700">Decision analysis</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <div class="stats" id="stats"></div>
+    <h3 class="section">confidence calibration (self-reported vs outcome)</h3><div id="tblCal"></div>
+    <h3 class="section">decision frequency</h3><div id="tblFreq"></div>
+    <h3 class="section">failure hotspots</h3><div id="tblHot"></div>
+    <h3 class="section">cost / latency by decision (top 8 by total cost)</h3><div id="tblCost"></div>
+    <p class="hint">Calibration buckets are 0–0.5, 0.5–0.7, 0.7–0.9, 0.9–1.0. A bucket with <b>high confidence but >20% failure</b> is flagged as a calibration risk — the dangerous case where the agent believes it's right and isn't. Thresholds are heuristics; treat as hypotheses, then read the cases.</p>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const $ = id => document.getElementById(id);
+const money = v => '$' + (v == null ? 0 : v).toFixed(4);
+
+function parseDecisions() {
+  const raw = $('logInput').value.trim();
+  if (!raw) throw new Error('paste a decision log first');
+  const data = JSON.parse(raw);
+  const arr = Array.isArray(data) ? data : data.decisions;
+  if (!Array.isArray(arr) || !arr.length) throw new Error('expected {decisions:[…]} or a bare array');
+  arr.forEach((d, i) => {
+    if (d.decision == null) d.decision = 'step ' + (i + 1);
+    d.confidence = d.confidence == null ? null : Math.min(1, Math.max(0, Number(d.confidence)));
+    d.outcome = d.outcome || 'success';
+  });
+  return arr;
+}
+
+function bucketOf(c) {
+  if (c == null) return null;
+  if (c < 0.5) return '0–0.5';
+  if (c < 0.7) return '0.5–0.7';
+  if (c < 0.9) return '0.7–0.9';
+  return '0.9–1.0';
+}
+
+function analyze() {
+  const badge = $('statusBadge');
+  let decisions;
+  try { decisions = parseDecisions(); }
+  catch (e) {
+    badge.textContent = 'PARSE ERROR'; badge.className = 'badge b-err';
+    $('tblCal').innerHTML = '<p class="hint">' + esc(e.message) + '</p>';
+    return;
+  }
+  const fail = d => d.outcome !== 'success';
+
+  // stats
+  const n = decisions.length;
+  const fails = decisions.filter(fail).length;
+  const actors = {};
+  decisions.forEach(d => actors[d.actor || '?'] = (actors[d.actor || '?'] || 0) + 1);
+  const avgConf = decisions.filter(d => d.confidence != null).reduce((a, d) => a + d.confidence, 0) / Math.max(1, decisions.filter(d => d.confidence != null).length);
+  const totalCost = decisions.reduce((a, d) => a + (d.costUsd || 0), 0);
+  $('stats').innerHTML =
+    `<span class="stat">decisions <b>${n}</b></span>` +
+    `<span class="stat">failures <b style="color:var(--err)">${fails}</b> (${Math.round(fails / Math.max(n, 1) * 100)}%)</span>` +
+    `<span class="stat">avg confidence <b>${(avgConf || 0).toFixed(2)}</b></span>` +
+    `<span class="stat">actors: ${Object.entries(actors).map(([a, c]) => esc(a) + '×' + c).join(' ')}</span>` +
+    `<span class="stat">total cost <b>${money(totalCost)}</b></span>`;
+
+  // calibration buckets
+  const buckets = {};
+  ['0–0.5', '0.5–0.7', '0.7–0.9', '0.9–1.0'].forEach(b => buckets[b] = { n: 0, fails: 0 });
+  decisions.forEach(d => {
+    const b = bucketOf(d.confidence);
+    if (!b) return;
+    buckets[b].n++; if (fail(d)) buckets[b].fails++;
+  });
+  const calRows = Object.entries(buckets).map(([b, g]) => {
+    const rate = g.n ? g.fails / g.n : 0;
+    const risky = g.n >= 3 && rate > 0.2 && parseFloat(b) >= 0.7;
+    return `<tr><td>${b}</td><td>${g.n}</td><td>${g.fails}</td><td>${(rate * 100).toFixed(0)}%</td><td>${risky ? '<span class="flag">⚠ CALIBRATION RISK</span>' : ''}</td></tr>`;
+  }).join('');
+  $('tblCal').innerHTML = '<table><tr><th>Confidence</th><th>N</th><th>Failures</th><th>Fail rate</th><th>Flag</th></tr>' + calRows + '</table>';
+
+  // decision frequency
+  const freq = {};
+  decisions.forEach(d => { freq[d.decision] = (freq[d.decision] || 0) + 1; });
+  const freqList = Object.entries(freq).map(([k, c]) => ({ decision: k, n: c })).sort((a, b) => b.n - a.n).slice(0, 10);
+  $('tblFreq').innerHTML = '<table><tr><th>Decision</th><th>Count</th><th>%</th></tr>' +
+    freqList.map(f => `<tr><td>${esc(f.decision)}</td><td>${f.n}</td><td>${Math.round(f.n / n * 100)}%</td></tr>`).join('') + '</table>';
+
+  // failure hotspots
+  const hot = {};
+  decisions.forEach(d => {
+    const k = d.decision;
+    (hot[k] = hot[k] || { n: 0, fails: 0 }).n++;
+    if (fail(d)) hot[k].fails++;
+  });
+  const hotList = Object.entries(hot).map(([k, g]) => ({ decision: k, ...g }))
+    .filter(g => g.fails > 0).sort((a, b) => b.fails - a.fails);
+  $('tblHot').innerHTML = hotList.length
+    ? '<table><tr><th>Decision</th><th>Failures</th><th>Total</th><th>Fail rate</th></tr>' +
+      hotList.map(g => `<tr><td>${esc(g.decision)}</td><td style="color:var(--err)">${g.fails}</td><td>${g.n}</td><td>${Math.round(g.fails / g.n * 100)}%</td></tr>`).join('') + '</table>'
+    : '<p class="hint">no failed decisions in this log</p>';
+
+  // cost / latency by decision
+  const agg = {};
+  decisions.forEach(d => {
+    const k = d.decision;
+    (agg[k] = agg[k] || { n: 0, cost: 0, lat: 0 }).n++;
+    agg[k].cost += (d.costUsd || 0); agg[k].lat += (d.latencyMs || 0);
+  });
+  const aggList = Object.entries(agg).map(([k, g]) => ({ decision: k, ...g, avgLat: g.lat / g.n })).sort((a, b) => b.cost - a.cost).slice(0, 8);
+  $('tblCost').innerHTML = '<table><tr><th>Decision</th><th>Total cost</th><th>Calls</th><th>Avg latency</th></tr>' +
+    aggList.map(g => `<tr><td>${esc(g.decision)}</td><td>${money(g.cost)}</td><td>${g.n}</td><td>${Math.round(g.avgLat)}ms</td></tr>`).join('') + '</table>';
+
+  // badge
+  const risky = Object.entries(buckets).some(([b, g]) => g.n >= 3 && (g.fails / g.n) > 0.2 && parseFloat(b) >= 0.7);
+  badge.textContent = risky ? 'CALIBRATION RISK — HIGH-CONFIDENCE FAILURES' : n + ' DECISIONS ANALYZED';
+  badge.className = 'badge ' + (risky ? 'b-err' : fails ? 'b-warn' : 'b-ok');
+}
+</script>
+</body>
+</html>
