@@ -1,0 +1,10 @@
+{
+  "name": "systems-bench",
+  "version": "3.3.0",
+  "description": "A workbench for building, evaluating, and understanding agentic AI systems — one tool at a time.",
+  "scripts": {
+    "test": "node tests/check.mjs"
+  },
+  "author": "iggym",
+  "license": "BSD-3-Clause"
+}
