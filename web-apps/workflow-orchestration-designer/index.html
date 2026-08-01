@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow Orchestration Designer — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1150px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem;resize:vertical}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:430px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.type{font-family:var(--mono);font-size:.65rem;text-transform:uppercase;padding:1px 6px;border-radius:8px;border:1px solid var(--border);color:var(--muted)}
+.t-plan{color:#7db4ff;border-color:rgba(125,180,255,.4)} .t-act{color:#ff8a3d;border-color:rgba(255,138,61,.4)}
+.t-tool{color:#5eead4;border-color:rgba(94,234,212,.4)} .t-eval{color:#ffc857;border-color:rgba(255,200,87,.4)}
+.t-hitl{color:#f85149;border-color:rgba(248,81,73,.4)} .t-handoff{color:#b39ddb;border-color:rgba(179,157,219,.4)} .t-end{color:#6b7680}
+</style>
+</head>
+<body>
+<h1>Workflow Orchestration Designer</h1>
+<p class="sub">Design multi-step agent workflows as typed nodes (plan, act, tool, eval, HITL, handoff, end) with explicit ok/err edges, then run a <b style="color:var(--text)">deterministic execution simulation</b> — trace, depth, branch coverage, and cycle detection — and export the spec as JSON or a Mermaid flowchart. Same input, same trace, every time.</p>
+<div class="grid">
+  <div class="card">
+    <label>Workflow spec (JSON)</label>
+    <textarea id="specInput" rows="16" spellcheck="false">{
+  "name": "Support Triage Agent",
+  "start": "classify",
+  "nodes": [
+    { "id": "classify", "type": "plan", "label": "Classify intent", "next": { "ok": "lookup", "err": "human" } },
+    { "id": "lookup", "type": "tool", "label": "lookup_invoice", "next": { "ok": "eval", "err": "human" } },
+    { "id": "eval", "type": "eval", "label": "Check refund eligibility", "next": { "ok": "end", "err": "human" } },
+    { "id": "human", "type": "hitl", "label": "Human approval", "next": { "ok": "end", "err": "end" } },
+    { "id": "end", "type": "end", "label": "Resolve ticket" }
+  ]
+}</textarea>
+    <div>
+      <label style="display:inline-block;margin-right:12px">Branch to simulate</label>
+      <select id="branchSel" style="display:inline-block;width:auto">
+        <option value="ok">happy path (all ok)</option>
+        <option value="err">failure path (first err)</option>
+        <option value="mixed">mixed (err at 'eval')</option>
+      </select>
+    </div>
+    <div>
+      <button onclick="simulate()">Simulate Execution</button>
+      <button class="sec" onclick="exportMermaid()">Export Mermaid</button>
+      <button class="sec" onclick="exportSpec()">Export JSON spec</button>
+    </div>
+    <p class="hint">Node types: <span class="type t-plan">plan</span> <span class="type t-act">act</span> <span class="type t-tool">tool</span> <span class="type t-eval">eval</span> <span class="type t-hitl">hitl</span> <span class="type t-handoff">handoff</span> <span class="type t-end">end</span>. Simulation follows <span class="mono" style="font-family:var(--mono)">next.ok</span> / <span class="mono" style="font-family:var(--mono)">next.err</span> deterministically and flags cycles, unreachable nodes, and missing start/end.</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Simulation report</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <pre id="report">Paste a spec and click "Simulate Execution".</pre>
+    <label style="margin-top:12px">Mermaid flowchart</label>
+    <pre id="mermaidOut" style="max-height:220px"></pre>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const status = (t, cls) => { const b = document.getElementById('statusBadge'); b.textContent = t; b.className = 'badge ' + cls; };
+const TYPE_LABEL = { plan:'plan', act:'act', tool:'tool', eval:'eval', hitl:'hitl', handoff:'handoff', end:'end' };
+
+function parseSpec() {
+  const s = JSON.parse(document.getElementById('specInput').value);
+  if (!Array.isArray(s.nodes) || s.nodes.length === 0) throw new Error('spec.nodes must be a non-empty array');
+  const ids = new Set(s.nodes.map(n => n.id));
+  if (ids.size !== s.nodes.length) throw new Error('duplicate node ids');
+  if (!ids.has(s.start)) throw new Error('start node "' + s.start + '" not in nodes');
+  if (!s.nodes.some(n => n.type === 'end')) throw new Error('no end node — add one node with type "end"');
+  return s;
+}
+
+function tracePath(spec, branch) {
+  const byId = Object.fromEntries(spec.nodes.map(n => [n.id, n]));
+  const trace = [];
+  const visited = new Set();
+  let cur = spec.start;
+  let depth = 0;
+  let usedErr = false;
+  while (cur && cur !== undefined) {
+    const node = byId[cur];
+    if (!node) { trace.push({ id: cur, event: 'MISSING NODE' }); break; }
+    trace.push({ id: node.id, type: node.type, label: node.label });
+    if (visited.has(cur)) { trace.push({ id: cur, event: 'CYCLE — workflow loops without terminating' }); break; }
+    visited.add(cur);
+    depth++;
+    if (node.type === 'end') break;
+    let edge = branch === 'err' ? 'err' : 'ok';
+    if (branch === 'mixed' && node.id === 'eval') edge = 'err';
+    const next = (node.next || {})[edge] || (node.next || {}).ok || (node.next || {}).err;
+    if (!next) { trace.push({ id: cur, event: 'DEAD END — no next.' + edge + ' and no fallback' }); break; }
+    cur = next;
+  }
+  return { trace, depth, visited };
+}
+
+function simulate() {
+  let spec;
+  try { spec = parseSpec(); } catch (e) { status('SPEC ERROR', 'b-err'); document.getElementById('report').textContent = 'Spec error: ' + e.message; return; }
+  const branch = document.getElementById('branchSel').value;
+  const { trace, depth } = tracePath(spec, branch);
+
+  // static checks
+  const byId = Object.fromEntries(spec.nodes.map(n => [n.id, n]));
+  const referenced = new Set([spec.start]);
+  spec.nodes.forEach(n => { Object.values(n.next || {}).forEach(v => referenced.add(v)); });
+  const unreachable = spec.nodes.filter(n => !referenced.has(n.id) && n.id !== spec.start).map(n => n.id);
+  const typeCounts = {};
+  spec.nodes.forEach(n => typeCounts[n.type] = (typeCounts[n.type] || 0) + 1);
+  const ends = spec.nodes.filter(n => n.type === 'end').length;
+
+  const cycle = trace.some(t => t.event === 'CYCLE');
+  const deadEnd = trace.some(t => t.event === 'DEAD END');
+
+  status((cycle ? 'CYCLE DETECTED' : deadEnd ? 'DEAD END' : 'TRACE COMPLETE') + ' · depth ' + depth, cycle ? 'b-err' : deadEnd ? 'b-warn' : 'b-ok');
+
+  const rows = trace.map((t, i) =>
+    t.event
+      ? `<tr><td>${i + 1}</td><td colspan="4" style="color:var(--err)">⚠ ${esc(t.event)}</td></tr>`
+      : `<tr><td>${i + 1}</td><td><span class="type t-${esc(t.type)}">${esc(TYPE_LABEL[t.type] || t.type)}</span></td><td>${esc(t.id)}</td><td>${esc(t.label || '')}</td></tr>`).join('');
+
+  document.getElementById('report').innerHTML =
+    `<p class="hint">spec: <b>${esc(spec.name || 'untitled')}</b> · branch mode: ${branch} · nodes: ${spec.nodes.length} · ends: ${ends} · start: ${esc(spec.start)}</p>` +
+    (unreachable.length ? `<p class="hint" style="color:var(--warn)">⚠ unreachable (never referenced): ${unreachable.map(esc).join(', ')}</p>` : '') +
+    `<p class="hint">type mix: ${Object.entries(typeCounts).map(([t, c]) => t + '×' + c).join(' · ')}</p>` +
+    `<table><tr><th>#</th><th>Type</th><th>Node</th><th>Label</th></tr>${rows}</table>`;
+
+  // mermaid
+  const mm = mermaidFull(spec);
+  document.getElementById('mermaidOut').textContent = mm;
+}
+
+function mermaidFull(spec) {
+  const lines = ['flowchart TD'];
+  const nameOf = n => n.type === 'end' ? 'E_' + n.id : 'N_' + n.id;
+  spec.nodes.forEach(n => {
+    lines.push(`  ${nameOf(n)}["${n.label || n.id}"${n.type === 'end' ? '(())' : ''}]`);
+  });
+  lines.push(`  START --> ${nameOf(spec.nodes.find(n => n.id === spec.start))}`);
+  spec.nodes.forEach(n => {
+    const nx = n.next || {};
+    const target = id => { const t = spec.nodes.find(x => x.id === id); return t ? nameOf(t) : null; };
+    const ok = target(nx.ok), err = target(nx.err);
+    if (ok) lines.push(`  ${nameOf(n)} -->|ok| ${ok}`);
+    if (err) lines.push(`  ${nameOf(n)} -->|err| ${err}`);
+    if (!ok && !err && n.type !== 'end') lines.push(`  ${nameOf(n)} -.->|no edges|`);
+  });
+  return lines.join('\n');
+}
+
+function exportMermaid() {
+  let spec;
+  try { spec = parseSpec(); } catch (e) { status('SPEC ERROR', 'b-err'); return; }
+  const mm = mermaidFull(spec);
+  document.getElementById('mermaidOut').textContent = mm;
+  document.getElementById('report').textContent += '\n\n--- MERMAID EXPORT ---\n' + mm;
+  status('MERMAID EXPORTED', 'b-ok');
+}
+
+function exportSpec() {
+  try { parseSpec(); } catch (e) { status('SPEC ERROR', 'b-err'); return; }
+  const spec = JSON.parse(document.getElementById('specInput').value);
+  document.getElementById('report').textContent = JSON.stringify(spec, null, 2);
+  status('SPEC VALID — see report', 'b-ok');
+}
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246e8ee9861f071',t:'MTc4NTYwODk4Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
