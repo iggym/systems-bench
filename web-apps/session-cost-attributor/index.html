@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Cost Attributor — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:16px}
+@media(max-width:900px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.74rem;resize:vertical;height:430px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;width:100%}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px;border:1px solid var(--border);color:var(--muted)}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border-color:rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border-color:rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border-color:rgba(210,153,34,.4)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem}
+.stat b{color:var(--accent)}
+h3.section{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:.72rem;font-family:var(--mono)}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.62rem;letter-spacing:.08em;position:sticky;top:0;background:#161b22}
+.bar-row{display:grid;grid-template-columns:130px 1fr 90px;gap:8px;align-items:center;margin:4px 0;font-family:var(--mono);font-size:.72rem}
+.bname{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{background:#010409;border:1px solid var(--border);border-radius:3px;height:14px;overflow:hidden}
+.bar{height:100%;background:var(--accent);border-radius:2px;min-width:2px}
+.bval{color:var(--text);text-align:right}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.72rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:240px;overflow:auto}
+.hint{font-size:.75rem;color:var(--muted);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Session Cost Attributor</h1>
+<p class="sub">Attributes spend across <b style="color:var(--text)">sessions, models, span types, and individual steps</b> from exported agent traces (agentTrace schema v1). Consumes one session, a <span class="mono" style="font-family:var(--mono)">{sessions:[…]}</span> bundle, or a bare spans array.</p>
+<div class="layout">
+  <div class="card">
+    <label>Traces (agentTrace v1 — one session, a sessions bundle, or spans array)</label>
+    <textarea id="traceInput" spellcheck="false">{
+  "sessions": [
+    { "session": "sess_a", "workflow": "support-triage", "spans": [
+      { "id": "a0", "parent": null, "type": "plan", "name": "triage session", "durationMs": 4100, "tokensIn": 2400, "tokensOut": 900, "costUsd": 0.0082, "status": "ok" },
+      { "id": "a1", "parent": "a0", "type": "llm", "name": "classify intent", "model": "gemini-2.5-flash", "durationMs": 620, "tokensIn": 850, "tokensOut": 40, "costUsd": 0.0004, "status": "ok" },
+      { "id": "a2", "parent": "a0", "type": "tool", "name": "lookup_invoice(8832)", "durationMs": 180, "costUsd": 0.0001, "status": "ok" },
+      { "id": "a3", "parent": "a0", "type": "llm", "name": "draft reply", "model": "gemini-2.5-pro", "durationMs": 880, "tokensIn": 1050, "tokensOut": 210, "costUsd": 0.0031, "status": "ok" },
+      { "id": "a4", "parent": "a0", "type": "eval", "name": "eligibility check", "model": "gemini-2.5-flash", "durationMs": 410, "tokensIn": 300, "tokensOut": 30, "costUsd": 0.0002, "status": "ok" }
+    ]},
+    { "session": "sess_b", "workflow": "support-triage", "spans": [
+      { "id": "b0", "parent": null, "type": "plan", "name": "triage session", "durationMs": 5200, "tokensIn": 3100, "tokensOut": 1400, "costUsd": 0.0118, "status": "ok" },
+      { "id": "b1", "parent": "b0", "type": "llm", "name": "classify intent", "model": "gemini-2.5-pro", "durationMs": 750, "tokensIn": 900, "tokensOut": 55, "costUsd": 0.0015, "status": "ok" },
+      { "id": "b2", "parent": "b0", "type": "tool", "name": "lookup_invoice(8832)", "durationMs": 190, "costUsd": 0.0001, "status": "ok" },
+      { "id": "b3", "parent": "b0", "type": "tool", "name": "issue_refund", "durationMs": 760, "costUsd": 0.0000, "status": "error", "error": "HTTP 429" },
+      { "id": "b4", "parent": "b0", "type": "llm", "name": "draft reply", "model": "groq-llama-3.3-70b", "durationMs": 510, "tokensIn": 1500, "tokensOut": 620, "costUsd": 0.0014, "status": "ok" }
+    ]},
+    { "session": "sess_c", "workflow": "research-summary", "spans": [
+      { "id": "c0", "parent": null, "type": "plan", "name": "summary session", "durationMs": 8300, "tokensIn": 9800, "tokensOut": 2400, "costUsd": 0.0401, "status": "ok" },
+      { "id": "c1", "parent": "c0", "type": "llm", "name": "ingest doc (chunk 1/3)", "model": "gemini-2.5-pro", "durationMs": 2100, "tokensIn": 5200, "tokensOut": 400, "costUsd": 0.0089, "status": "ok" },
+      { "id": "c2", "parent": "c0", "type": "loop", "name": "summary loop (3 iters)", "durationMs": 3600, "tokensIn": 3800, "tokensOut": 1700, "costUsd": 0.0094, "status": "ok" },
+      { "id": "c3", "parent": "c0", "type": "tool", "name": "search_index(topics)", "durationMs": 240, "costUsd": 0.0002, "status": "ok" }
+    ]}
+  ]
+}</textarea>
+    <button onclick="attribute()">Attribute Cost</button>
+    <p class="hint">Cost comes from each span's <span class="mono" style="font-family:var(--mono)">costUsd</span> / token fields as recorded in your log. Missing cost is treated as 0.0 — attribution is as accurate as your metadata; nothing here is billed or estimated beyond what you supply.</p>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="font-weight:700">Cost breakdown</span>
+      <span id="statusBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <div class="stats" id="stats"></div>
+    <h3 class="section">by session</h3><div id="barsSession"></div>
+    <h3 class="section">by model</h3><div id="barsModel"></div>
+    <h3 class="section">by span type</h3><div id="barsType"></div>
+    <h3 class="section">most expensive steps (top 8 by cost)</h3><div id="tblSteps"></div>
+    <h3 class="section">per-session detail</h3><div id="tblSessions"></div>
+    <p class="hint">Bars are relative to the max within each grouping. The blended $/1M figure = total cost ÷ total tokens × 1e6 — useful for comparing sessions with different model mixes.</p>
+  </div>
+</div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const $ = id => document.getElementById(id);
+const money = v => '$' + (v == null ? 0 : v).toFixed(4);
+
+function parseSessions() {
+  const raw = $('traceInput').value.trim();
+  if (!raw) throw new Error('paste a trace first');
+  const data = JSON.parse(raw);
+  let sessions;
+  if (Array.isArray(data)) sessions = [{ label: 'session', spans: data }];
+  else if (Array.isArray(data.sessions)) sessions = data.sessions.map((s, i) => ({ label: s.session || s.workflow || 'session_' + i, workflow: s.workflow, spans: s.spans || [] }));
+  else if (Array.isArray(data.spans)) sessions = [{ label: data.session || 'session', workflow: data.workflow, spans: data.spans }];
+  else throw new Error('expected {sessions:[…]}, an agentTrace object, or a bare spans array');
+  sessions.forEach((s, i) => { if (!s.label) s.label = 'session_' + i; });
+  return sessions;
+}
+
+function bars(containerId, groups, max) {
+  $('bars' + containerId).innerHTML = groups.map(g =>
+    `<div class="bar-row"><span class="bname" title="${esc(g.label)}">${esc(g.label)}</span><div class="track"><div class="bar" style="width:${Math.round((g.cost / Math.max(max, 1e-9)) * 100)}%"></div></div><span class="bval">${money(g.cost)} · ${g.n}×</span></div>`).join('');
+}
+
+function attribute() {
+  const badge = $('statusBadge');
+  let sessions;
+  try { sessions = parseSessions(); }
+  catch (e) {
+    badge.textContent = 'PARSE ERROR'; badge.className = 'badge b-err';
+    $('tblSteps').innerHTML = '<p class="hint">' + esc(e.message) + '</p>';
+    return;
+  }
+  const spans = [];
+  sessions.forEach(s => (s.spans || []).forEach(sp => spans.push(Object.assign({}, sp, { _session: s.label }))));
+
+  const totalCost = spans.reduce((a, s) => a + (s.costUsd || 0), 0);
+  const totalIn = spans.reduce((a, s) => a + (s.tokensIn || 0), 0);
+  const totalOut = spans.reduce((a, s) => a + (s.tokensOut || 0), 0);
+  const errors = spans.filter(s => s.status === 'error').length;
+  const timeouts = spans.filter(s => s.status === 'timeout').length;
+
+  $('stats').innerHTML =
+    `<span class="stat">sessions <b>${sessions.length}</b></span>` +
+    `<span class="stat">spans <b>${spans.length}</b></span>` +
+    `<span class="stat">total <b>${money(totalCost)}</b></span>` +
+    `<span class="stat">tokens <b>${(totalIn + totalOut).toLocaleString()}</b></span>` +
+    `<span class="stat">blended <b>${money(totalCost / Math.max(totalIn + totalOut, 1) * 1e6)}/1M</b></span>` +
+    `<span class="stat">errors <b style="color:var(--err)">${errors}</b> · timeouts <b style="color:var(--warn)">${timeouts}</b></span>`;
+
+  // by session
+  const perSession = sessions.map(s => {
+    const ss = s.spans || [];
+    return { label: s.label, cost: ss.reduce((a, x) => a + (x.costUsd || 0), 0), n: ss.length,
+      tokens: ss.reduce((a, x) => a + (x.tokensIn || 0) + (x.tokensOut || 0), 0),
+      errs: ss.filter(x => x.status === 'error').length };
+  });
+  bars('Session', perSession, Math.max(...perSession.map(g => g.cost), 1e-9));
+
+  // by model
+  const perModel = {};
+  spans.forEach(s => {
+    const m = s.model || '(no model / tool)';
+    (perModel[m] = perModel[m] || { cost: 0, n: 0, tokens: 0 }).cost += (s.costUsd || 0);
+    perModel[m].n++; perModel[m].tokens += (s.tokensIn || 0) + (s.tokensOut || 0);
+  });
+  const modelList = Object.entries(perModel).map(([label, g]) => Object.assign({ label }, g)).sort((a, b) => b.cost - a.cost);
+  bars('Model', modelList, Math.max(...modelList.map(g => g.cost), 1e-9));
+
+  // by type
+  const perType = {};
+  spans.forEach(s => { const t = s.type || 'other'; (perType[t] = perType[t] || { cost: 0, n: 0 }).cost += (s.costUsd || 0); perType[t].n++; });
+  const typeList = Object.entries(perType).map(([label, g]) => Object.assign({ label }, g)).sort((a, b) => b.cost - a.cost);
+  bars('Type', typeList, Math.max(...typeList.map(g => g.cost), 1e-9));
+
+  // top steps by cost
+  const byStep = {};
+  spans.forEach(s => {
+    const k = s.name || s.id || '?';
+    (byStep[k] = byStep[k] || { cost: 0, n: 0, errs: 0 }).cost += (s.costUsd || 0);
+    byStep[k].n++; if (s.status === 'error') byStep[k].errs++;
+  });
+  const steps = Object.entries(byStep).map(([label, g]) => Object.assign({ label }, g)).sort((a, b) => b.cost - a.cost).slice(0, 8);
+  $('tblSteps').innerHTML = '<table><tr><th>Step</th><th>Cost</th><th>Calls</th><th>Errors</th></tr>' +
+    steps.map(s => `<tr><td>${esc(s.label)}</td><td>${money(s.cost)}</td><td>${s.n}</td><td style="color:var(--err)">${s.errs || ''}</td></tr>`).join('') + '</table>';
+
+  // per-session detail
+  $('tblSessions').innerHTML = '<table><tr><th>Session</th><th>Cost</th><th>Tokens</th><th>Spans</th><th>Errors</th><th>Blended $/1M</th></tr>' +
+    perSession.map(s => `<tr><td>${esc(s.label)}</td><td>${money(s.cost)}</td><td>${s.tokens.toLocaleString()}</td><td>${s.n}</td><td style="color:var(--err)">${s.errs || ''}</td><td>${money(s.cost / Math.max(s.tokens, 1) * 1e6)}</td></tr>`).join('') + '</table>';
+
+  const pctByModel = modelList.length ? Math.round((modelList[0].cost / Math.max(totalCost, 1e-9)) * 100) : 0;
+  badge.textContent = 'ATTRIBUTED ' + money(totalCost) + ' · TOP MODEL ' + pctByModel + '%';
+  badge.className = 'badge ' + (errors ? 'b-warn' : 'b-ok');
+}
+</script>
+</body>
+</html>
