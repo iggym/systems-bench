@@ -3,100 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GAN Contract Evaluator — systems-bench</title>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@700;900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>JSON Schema Contract Validator — systems-bench</title>
 <style>
-  :root {
-    --bg: #1b2025; --bg-raised: #242b31; --bg-card: #20262b;
-    --grid-line: #2e363e; --text: #e9edf1; --text-mute: #8d99a3;
-    --accent-signal: #5eead4; --accent-tag: #ff8a3d; --accent-err: #ff5e5e; --radius: 4px;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px; border-bottom: 1px solid var(--grid-line); background: var(--bg-raised); }
-  .title { font-family: 'Big Shoulders', sans-serif; font-size: 24px; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
-  .panel { display: flex; flex-direction: column; border-right: 1px solid var(--grid-line); overflow: hidden; }
-  .panel-header { padding: 12px 24px; border-bottom: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-mute); text-transform: uppercase; background: var(--bg-card); display: flex; justify-content: space-between; }
-  .panel-body { padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
-  label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-mute); }
-  textarea { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--grid-line); padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: var(--radius); outline: none; resize: none; line-height: 1.5; min-height: 140px; }
-  textarea:focus { border-color: var(--accent-tag); }
-  pre { background: var(--bg-raised); padding: 16px; border-radius: var(--radius); border: 1px solid var(--grid-line); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent-signal); white-space: pre-wrap; word-break: break-all; margin: 0; }
-  button { background: var(--bg-raised); color: var(--text); border: 1px solid var(--grid-line); padding: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase; border-radius: var(--radius); cursor: pointer; transition: border-color 0.15s ease; }
-  button:hover { border-color: var(--accent-tag); color: var(--accent-signal); }
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1100px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem;resize:vertical;height:300px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.75rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:480px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:.75rem}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);text-transform:uppercase;font-size:.66rem;letter-spacing:.4px}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.sum .stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:.8rem}
 </style>
 </head>
 <body>
-<header>
-  <h1 class="title">GAN Contract Evaluator</h1>
-</header>
-<main>
-  <div class="panel">
-    <div class="panel-header">Generator Output & Schema Contract</div>
-    <div class="panel-body">
-      <label>Target JSON Schema Contract</label>
-      <textarea id="schemaInput" spellcheck="false">{
+<h1>JSON Schema Contract Validator</h1>
+<p class="sub">Validates a JSON payload against a JSON Schema subset: <span class="mono" style="font-family:var(--mono)">required</span>, <span class="mono" style="font-family:var(--mono)">type</span>, <span class="mono" style="font-family:var(--mono)">enum</span>, <span class="mono" style="font-family:var(--mono)">pattern</span>, numeric bounds, string length, nested objects, and array items — with a JSONPath violation report. 100% local, deterministic.</p>
+<div class="grid">
+  <div class="card">
+    <label>JSON Schema (draft subset)</label>
+    <textarea id="schemaInput" spellcheck="false">{
   "type": "object",
   "required": ["status", "error_code", "data"],
   "properties": {
-    "status": { "type": "string" },
-    "error_code": { "type": "integer" }
-  }
-}</textarea>
-      <label>Generator Output Payload</label>
-      <textarea id="payloadInput" spellcheck="false">{
-  "status": "success",
-  "error_code": 0,
-  "data": { "user_id": "9948" }
-}</textarea>
-      <button onclick="runCritiqueLoop()">Execute Discriminator Loop</button>
-    </div>
-  </div>
-  <div class="panel" style="border-right: none;">
-    <div class="panel-header">
-      <span>Discriminator Audit Report</span>
-      <span id="verdictBadge" style="color:var(--accent-signal)">IDLE</span>
-    </div>
-    <div class="panel-body">
-      <label>Adversarial Critique Log</label>
-      <pre id="auditOutput">Click 'Execute Discriminator Loop' to validate payload against schema contract.</pre>
-    </div>
-  </div>
-</main>
-<script>
-  const schemaInput = document.getElementById('schemaInput');
-  const payloadInput = document.getElementById('payloadInput');
-  const auditOutput = document.getElementById('auditOutput');
-  const verdictBadge = document.getElementById('verdictBadge');
-
-  function runCritiqueLoop() {
-    try {
-      const schema = JSON.parse(schemaInput.value);
-      const payload = JSON.parse(payloadInput.value);
-
-      const requiredKeys = schema.required || [];
-      const payloadKeys = Object.keys(payload);
-      const missingKeys = requiredKeys.filter(k => !payloadKeys.includes(k));
-
-      const isPassed = missingKeys.length === 0;
-
-      verdictBadge.textContent = isPassed ? "CONTRACT VALIDATED" : "CONTRACT VIOLATION";
-      verdictBadge.style.color = isPassed ? "var(--accent-signal)" : "var(--accent-err)";
-
-      auditOutput.textContent = JSON.stringify({
-        discriminator_verdict: isPassed ? "PASS" : "REJECT",
-        schema_required_fields: requiredKeys,
-        payload_provided_fields: payloadKeys,
-        violations: missingKeys.length > 0 ? missingKeys.map(k => `Missing required key: '${k}'`) : [],
-        correction_instruction: isPassed ? null : "Regenerate payload ensuring all required schema keys are present and correctly typed."
-      }, null, 2);
-    } catch (e) {
-      verdictBadge.textContent = "SYNTAX ERROR";
-      verdictBadge.style.color = "var(--accent-err)";
-      auditOutput.textContent = "Error: Invalid JSON syntax in schema contract or generator payload.";
+    "status": { "type": "string", "enum": ["success", "error"] },
+    "error_code": { "type": "integer", "minimum": 0 },
+    "message": { "type": "string", "maxLength": 200 },
+    "data": {
+      "type": "object",
+      "required": ["user_id"],
+      "properties": {
+        "user_id": { "type": "string", "pattern": "^u-\\d{4,}$" },
+        "tier": { "type": "string", "enum": ["free", "pro", "enterprise"] },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
     }
   }
+}</textarea>
+    <label>Payload to validate</label>
+    <textarea id="payloadInput" spellcheck="false">{
+  "status": "success",
+  "error_code": 0,
+  "message": "ok",
+  "data": {
+    "user_id": "u-9948",
+    "tier": "pro",
+    "tags": ["alpha"]
+  }
+}</textarea>
+    <button onclick="runValidation()">Validate Contract</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Violation report</span>
+      <span id="verdictBadge" class="badge b-warn">IDLE</span>
+    </div>
+    <div class="sum">
+      <span class="stat" id="stChecks">checks: —</span>
+      <span class="stat" id="stViol">violations: —</span>
+      <span class="stat" id="stPath">deepest path: —</span>
+    </div>
+    <pre id="auditOutput">Paste a schema and payload, then click "Validate Contract".</pre>
+    <p class="hint">Supports: type, required, enum, pattern, min/max, minLength/maxLength, items (arrays), nested properties, additionalProperties (default true). No <span class="mono" style="font-family:var(--mono)">$ref</span> / oneOf / allOf — those are out of scope for this client-side subset.</p>
+  </div>
+</div>
+<script>
+const typeOf = v => {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array';
+  if (Number.isInteger(v)) return 'integer';
+  return typeof v;
+};
+
+// JSON-schema-style type names → JS type groups
+const TYPE_GROUPS = {
+  string: ['string'],
+  integer: ['integer'],
+  number: ['number', 'integer'],
+  boolean: ['boolean'],
+  object: ['object'],
+  array: ['array'],
+  'null': ['null']
+};
+
+function validateNode(node, schema, path, out, opts) {
+  // type check
+  if (schema.type !== undefined) {
+    const groups = TYPE_GROUPS[schema.type] || [schema.type];
+    if (!groups.includes(typeOf(node))) {
+      out.push({ path, code: 'TYPE', message: `expected ${schema.type}, got ${typeOf(node)}` });
+      return;
+    }
+  }
+  // literal equality (const)
+  if (schema.const !== undefined && node !== schema.const) {
+    out.push({ path, code: 'CONST', message: `expected ${JSON.stringify(schema.const)}, got ${JSON.stringify(node)}` });
+  }
+  // enum
+  if (Array.isArray(schema.enum) && !schema.enum.includes(node)) {
+    out.push({ path, code: 'ENUM', message: `value not in enum: ${JSON.stringify(schema.enum)}` });
+  }
+  // strings
+  if (typeOf(node) === 'string') {
+    if (typeof schema.minLength === 'number' && node.length < schema.minLength)
+      out.push({ path, code: 'MIN_LENGTH', message: `length ${node.length} < minLength ${schema.minLength}` });
+    if (typeof schema.maxLength === 'number' && node.length > schema.maxLength)
+      out.push({ path, code: 'MAX_LENGTH', message: `length ${node.length} > maxLength ${schema.maxLength}` });
+    if (schema.pattern) {
+      try { if (!new RegExp(schema.pattern).test(node)) out.push({ path, code: 'PATTERN', message: `"${node.slice(0,40)}" does not match ${schema.pattern}` }); }
+      catch (e) { out.push({ path, code: 'SCHEMA_ERR', message: 'invalid pattern in schema: ' + schema.pattern }); }
+    }
+  }
+  // numbers
+  if (typeOf(node) === 'number' || typeOf(node) === 'integer') {
+    if (typeof schema.minimum === 'number' && node < schema.minimum)
+      out.push({ path, code: 'MIN', message: `${node} < minimum ${schema.minimum}` });
+    if (typeof schema.maximum === 'number' && node > schema.maximum)
+      out.push({ path, code: 'MAX', message: `${node} > maximum ${schema.maximum}` });
+  }
+  // objects
+  if (typeOf(node) === 'object' && schema.properties) {
+    const req = schema.required || [];
+    for (const k of req) {
+      if (!(k in node)) out.push({ path: path ? path + '.' + k : k, code: 'MISSING_REQUIRED', message: 'required key missing: "' + k + '"' });
+    }
+    for (const [k, sub] of Object.entries(schema.properties)) {
+      if (node[k] !== undefined) validateNode(node[k], sub, path ? path + '.' + k : k, out, opts);
+    }
+    if (schema.additionalProperties === false) {
+      const allowed = new Set(Object.keys(schema.properties || {}));
+      for (const k of Object.keys(node)) {
+        if (!allowed.has(k)) out.push({ path: path ? path + '.' + k : k, code: 'EXTRA_PROP', message: 'additional property not allowed: "' + k + '"' });
+      }
+    }
+  }
+  // arrays
+  if (typeOf(node) === 'array') {
+    if (schema.items) {
+      node.forEach((item, i) => validateNode(item, schema.items, `${path}[${i}]`, out, opts));
+    }
+    if (typeof schema.minItems === 'number' && node.length < schema.minItems)
+      out.push({ path, code: 'MIN_ITEMS', message: `array length ${node.length} < minItems ${schema.minItems}` });
+    if (typeof schema.maxItems === 'number' && node.length > schema.maxItems)
+      out.push({ path, code: 'MAX_ITEMS', message: `array length ${node.length} > maxItems ${schema.maxItems}` });
+  }
+}
+
+function runValidation() {
+  const badge = document.getElementById('verdictBadge');
+  const out = document.getElementById('auditOutput');
+  let schema, payload;
+  try { schema = JSON.parse(document.getElementById('schemaInput').value); }
+  catch (e) { badge.textContent = 'BAD SCHEMA'; badge.className = 'badge b-err'; out.textContent = 'Schema is not valid JSON: ' + e.message; return; }
+  try { payload = JSON.parse(document.getElementById('payloadInput').value); }
+  catch (e) { badge.textContent = 'BAD PAYLOAD'; badge.className = 'badge b-err'; out.textContent = 'Payload is not valid JSON: ' + e.message; return; }
+
+  const violations = [];
+  const start = performance.now();
+  validateNode(payload, schema, '$', violations, {});
+  const ms = Math.round(performance.now() - start);
+
+  // classify & group
+  const byCode = {};
+  violations.forEach(v => { byCode[v.code] = (byCode[v.code] || 0) + 1; });
+  const codes = Object.keys(byCode).sort();
+  const pass = violations.length === 0;
+
+  badge.textContent = pass ? 'VALID ✓' : violations.length + ' VIOLATION' + (violations.length > 1 ? 'S' : '');
+  badge.className = 'badge ' + (pass ? 'b-ok' : 'b-err');
+  document.getElementById('stChecks').textContent = 'checks: ' + (pass ? 'passed' : violations.length);
+  document.getElementById('stViol').textContent = 'violations: ' + violations.length;
+  document.getElementById('stPath').textContent = 'time: ' + ms + 'ms';
+
+  const rows = violations.map(v =>
+    `<tr><td class="mono" style="font-family:var(--mono)">${v.path}</td><td><span class="badge b-err" style="font-family:var(--mono)">${v.code}</span></td><td>${escapeHtml(v.message)}</td></tr>`).join('');
+
+  out.innerHTML = pass
+    ? '<p style="color:var(--ok)">Contract validated — payload conforms to the schema.</p>'
+    : `<table><tr><th>JSONPath</th><th>Code</th><th>Detail</th></tr>${rows}</table>`;
+
+  out.innerHTML += `<p class="hint">Grouped by code: ${codes.map(c => c + '×' + byCode[c]).join(' · ') || 'none'}</p>`;
+}
+
+const escapeHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 </script>
 </body>
 </html>
