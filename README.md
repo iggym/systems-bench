@@ -100,6 +100,9 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 - 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool (syntax, load, schema verification).
 - 🪶 **Grab-and-go** — each tool is one HTML file. Open it, use it, delete it. No framework, no build step, no vendor lock.
 
+> **📚 Origin & Reference Math for Systems Latency & Capacity Profiler:**  
+> The `Systems Latency & Capacity Profiler` tool is built on classic systems-engineering back-of-the-envelope heuristics inspired by **[Jeff Dean](https://research.google/people/jeff/)**'s keynote *Building Software Systems at Google and Lessons Learned* ([Stanford CS295 slides](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf)) and the canonical **[Latency Numbers Every Programmer Should Know](https://gist.github.com/jboner/2841832)** reference table (see also Colin Scott's [Interactive Latency Timeline](https://colin-scott.github.io/personal_website/research/interactive_latency.html)). These baseline figures provide the order-of-magnitude heuristics used in the tool's Little's Law in-flight byte and bottleneck calculations.
+
 ### 🗂️ The 24 tools at a glance
 
 **🧪 Evaluate** — benchmarks, evals, judges, diagnostics
@@ -139,7 +142,7 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 | Agent Behavior Drift Monitor | Baseline-vs-recent drift on daily aggregates + interpretation hints |
 | Governance & Budget Caps | Per-event enforcement: ALLOW/WARN/HITL/BLOCK/BLOCK_BUDGET |
 | EdgeGuard AI | Dual-engine hedge router: threshold-firing, loser aborted, cost-accounted |
-| Systems Latency & Capacity Profiler | Back-of-the-envelope Little's Law in-flight math, bandwidth vs link, IOPS vs disk |
+| Systems Latency & Capacity Profiler | Back-of-the-envelope capacity planning math inspired by [Jeff Dean's *Numbers Every Programmer Should Know*](https://research.google/people/jeff/) (see [Stanford CS295 slides](https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf), [canonical numbers gist](https://gist.github.com/jboner/2841832) & [interactive latency timeline](https://colin-scott.github.io/personal_website/research/interactive_latency.html)) — models Little's Law in-flight bytes, bandwidth vs link, and IOPS vs disk |
 
 ---
 
@@ -166,7 +169,7 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 
 **The strategic value of `systems-bench`:**
 - 🧭 **A shared vocabulary.** Every tool is tagged against **8 engineering criteria** — Reliability, Architecture & Contracts, Closed-loop Evaluation, Tooling Integration, Workflow & Orchestration, Observability, Safety & Governance, Scale & Maintainability. Teams get a common lens for "are we covering the bases?"
-- 📉 **Cost & risk visibility before they hit.** Budget enforcement (Governance & Budget Caps), drift detection (Behavior Drift Monitor), trace analytics (Trace Inspector & Session Cost Attributor), and capacity math (Systems Latency Profiler) turn "we'll find out in the bill" into "we know now."
+- 📉 **Cost & risk visibility before they hit.** Budget enforcement (Governance & Budget Caps), drift detection (Behavior Drift Monitor), trace analytics (Trace Inspector & Session Cost Attributor), and capacity math (Systems Latency Profiler, referencing [Jeff Dean's classic systems numbers](https://gist.github.com/jboner/2841832)) turn "we'll find out in the bill" into "we know now."
 - 🔬 **Evaluation as a discipline, not an afterthought.** Golden datasets, rubric judges, contract validators, and repair loops give you the closed feedback loop that prevents prompt/model regressions.
 - 🕵️ **Observability that's actually inspectable.** Trace, decision-log, and behavior-drift tools use three documented schemas (`agentTrace`, `decisionLog`, `behaviorSnapshot`) — the same contract your own exports can follow.
 - ⚖️ **Governance primitives.** HITL triggers, forbidden actions, budget caps, and output validation — simulated locally so you can design policy *before* wiring it into production gateways.
