@@ -155,7 +155,7 @@
         "architecture",
         "observability"
       ],
-      "notes": "Token counts are heuristic estimates (words \u00d7 1.33), not model tokenizers. Retention is a lexical floor, not semantic fidelity.",
+      "notes": "Lossless gzip ratio estimates byte savings; token budget counts use lexical word approximation (~1.33 tokens/word), not model-specific BPE tokenizers.",
       "dateAdded": "2026-07-31",
       "updated": "2026-08-01"
     },
@@ -239,12 +239,12 @@
         "architecture"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Token counts are heuristic (words \u00d7 1.33). Formats and budgets; it does not generate examples.",
+      "notes": "Token budgeting uses heuristic word-multiplier estimation (~1.33 tok/word); formatting and duplicate detection are deterministic.",
       "updated": "2026-08-01"
     },
     {
       "id": "gan-contract-evaluator",
-      "name": "JSON Schema Contract Validator",
+      "name": "JSON Schema Contract Validator (Subset)",
       "url": "web-apps/gan-contract-evaluator/index.html",
       "description": "Validates a JSON payload against a JSON Schema subset: required, type, enum, pattern, numeric bounds, string length, nested objects, array items, additionalProperties \u2014 with a JSONPath violation report. 100% local, deterministic.",
       "tags": [
@@ -258,7 +258,7 @@
         "architecture",
         "safety"
       ],
-      "notes": "Supports a documented client-side schema subset; $ref / oneOf / allOf are out of scope.",
+      "notes": "Validates a core JSON Schema subset (required, types, bounds, patterns, nested objects/arrays). Does not support $ref, oneOf, allOf, or anyOf.",
       "dateAdded": "2026-07-31",
       "updated": "2026-08-01"
     },
@@ -305,10 +305,10 @@
       "notes": "A policy simulator \u2014 it does not enforce anything; wire the same rules into your real gateway. Regex patterns are case-insensitive."
     },
     {
-      "id": "jeff-dean-latency-capacity-profiler",
-      "name": "Latency & Capacity Profiler",
+      "id": "latency-capacity-profiler",
+      "name": "Systems Latency & Capacity Profiler",
       "url": "web-apps/latency-capacity-profiler/index.html",
-      "description": "based on Jeff Dean's Back-of-the-envelope capacity math in the spirit of 'Numbers Every Programmer Should Know': in-flight bytes (bandwidth \u00d7 RTT), per-request data volume, required bandwidth vs your link, IOPS vs disk limits, a live-editable latency reference table, and a bottleneck diagnosis.",
+      "description": "Back-of-the-envelope capacity planning math inspired by Jeff Dean's 'Numbers Every Programmer Should Know': models in-flight bytes (bandwidth x RTT via Little's Law), per-request data volume, required bandwidth vs link limits, IOPS vs disk limits, and a live-editable latency reference table.",
       "tags": [
         "diagnostic",
         "capacity-planning",
@@ -321,7 +321,7 @@
         "scale",
         "architecture"
       ],
-      "notes": "Order-of-magnitude planning figures with editable assumptions \u2014 not a benchmark. This is the capacity calculator the entry originally promised; it is now actually built.",
+      "notes": "Client-side calculator based on classic systems heuristics from Jeff Dean's 'Numbers Every Programmer Should Know' (Stanford CS295 talk / canonical gist https://gist.github.com/jboner/2841832). Useful for architectural scoping; not a live network benchmark.",
       "dateAdded": "2026-07-31",
       "updated": "2026-08-01"
     },
