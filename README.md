@@ -11,7 +11,6 @@
 [![Tools](https://img.shields.io/badge/tools-24-5eead4?style=flat-square&logo=wrench)](https://iggym.github.io/systems-bench/)
 [![Zero deps](https://img.shields.io/badge/dependencies-0-3fb950?style=flat-square)](https://github.com/iggym/systems-bench)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-8d99a3?style=flat-square)](LICENSE)
-[![Last updated](https://img.shields.io/badge/updated-2026--08--01-ff8a3d?style=flat-square)](https://github.com/iggym/systems-bench)
 
 </div>
 
@@ -43,7 +42,7 @@ cd systems-bench
 python3 -m http.server 8000        # open http://localhost:8000
 ```
 
-Run the full verification suite (syntax, link integrity, schema contract, and behavior tests on every tool):
+Run the verification suite (syntax, link integrity, schema contract, and limitation notes on every tool):
 
 ```bash
 npm test
@@ -61,7 +60,7 @@ npm test
 }
 ```
 
-You get a waterfall timeline, critical-path highlighting, token/cost/status aggregation, and per-span detail — a mini-version of what distributed tracing tools show, but **client-side and free**.
+You get a waterfall timeline, critical-path highlighting, token/cost/status aggregation, and per-span detail — a client-side alternative to SaaS distributed tracing tools.
 
 ### 🔭 How it's put together
 
@@ -90,15 +89,15 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
    ┌──────────────────────────────────────────────────────────────┐
    │   tests/check.mjs   —   the CI gate                          │
    │   apps.json contract · JS syntax · link integrity ·          │
-   │   schema verification · zero slop policy enforced            │
+   │   schema verification · limitation notes enforced            │
    └──────────────────────────────────────────────────────────────┘
 ```
 
-**Design principles** (enforced by the check suite):
+**Design principles:**
 
-- 🔒 **Honest by construction** — a tool can't go `live` without an honest-limits `notes` line; planned tools are never counted as shipped; low-utility tools are pruned.
+- 🔒 **Explicit Limitation Notes (`notes` field)** — every tool documents its exact heuristics and boundaries (e.g., subset schema validation, lexical word-multiplier token estimates, regex limitations).
 - 🧩 **Single source of truth** — `apps.json` is the only inventory; the root bench renders directly from it.
-- 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool (syntax, load, schema verification). CI runs it on every push.
+- 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool (syntax, load, schema verification).
 - 🪶 **Grab-and-go** — each tool is one HTML file. Open it, use it, delete it. No framework, no build step, no vendor lock.
 
 ### 🗂️ The 24 tools at a glance
@@ -114,8 +113,8 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 | Context Compression Benchmarker | Real compression ratios vs lexical retention, incl. live summary |
 | System Prompt Mutation Optimizer | Deterministic prompt variants, ranked locally or by live judge |
 | Decision Log Analyzer | Confidence-vs-outcome calibration, failure hotspots, cost per decision |
-| Adversarial Edge-Case Red-Teamer | Static review + optional live probe against a real model |
-| JSON Schema Contract Validator | Real schema validation — type/enum/pattern/bounds + JSONPath report |
+| Adversarial Edge-Case Red-Teamer | Static regex heuristic review + optional live probe against a real model |
+| JSON Schema Contract Validator (Subset) | Core schema validation (type/enum/pattern/bounds, without `$ref`/`oneOf`/`allOf`) |
 | JSON Schema Repair Loop | Validate → classify → auto-repair → re-validate, with a repair log |
 
 **🛠️ Design** — harnesses, schemas, context & state engineering
@@ -125,8 +124,8 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 | Workflow Orchestration Designer | Typed node graphs (plan/act/tool/eval/HITL/handoff/end) + deterministic sim + Mermaid export |
 | MCP Client Inspector | Compile MCP-style tool defs → OpenAI/Gemini schemas as you type |
 | Context Firewall & Hand-off Generator | Strip trace noise, redact PII by policy, build a compact hand-off payload |
-| Context Budgeting & Compactor | Fit context into a token budget — 4 strategies with audit trails |
-| Few-Shot Canonical Example Builder | Format + budget few-shot blocks, detect duplicates |
+| Context Budgeting & Compactor | Fit context into a token budget using compaction and word-multiplier estimation |
+| Few-Shot Canonical Example Builder | Format + budget few-shot blocks (word-multiplier token estimate) |
 | Scratchpad State Manager | Versioned hand-off payload with SHA-256 integrity |
 | ReAct Loop Visualizer | Step-through Thought→Action→Observation timeline |
 | AI Infra Router & SOW Generator | Build-vs-buy framework, transparent cost model, PII scrubber, DRAFT SOW |
@@ -140,15 +139,24 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 | Agent Behavior Drift Monitor | Baseline-vs-recent drift on daily aggregates + interpretation hints |
 | Governance & Budget Caps | Per-event enforcement: ALLOW/WARN/HITL/BLOCK/BLOCK_BUDGET |
 | EdgeGuard AI | Dual-engine hedge router: threshold-firing, loser aborted, cost-accounted |
-| Jeff Dean Latency & Capacity Profiler | Little's-law in-flight math, bandwidth vs link, IOPS vs disk |
+| Systems Latency & Capacity Profiler | Back-of-the-envelope Little's Law in-flight math, bandwidth vs link, IOPS vs disk |
 
-### ➕ Adding a tool (contribution-ready)
+---
 
-1. Create `web-apps/<tool-id>/index.html` — one self-contained HTML file, zero deps.
-2. Add an entry to `apps.json` (id, name, url, description, tags, status, mode, focus, dimensions, dateAdded, **notes**).
-3. Run `npm test` — the checker validates syntax, link integrity, and schema compliance.
+## 🔐 Security & API Key Best Practices
 
-Full contract in [the registry section](#-the-registry-contract) below.
+A key design goal of `systems-bench` is **client-side privacy**: no server backend exists, and data is never transmitted to third parties unless you explicitly use a tool in `hybrid` or `api` mode to call an LLM provider directly.
+
+When working with live API keys (e.g., Gemini or Groq keys for red-teaming or multi-model evaluation):
+
+1. **Browser Memory Only:** API keys entered into `systems-bench` tools are stored only in your browser's ephemeral runtime memory and transmitted directly to the API provider (`googleapis.com` or `api.groq.com`). They are never persisted to `localStorage` or sent to any telemetry server.
+2. **Local Supply-Chain Best Practice:** While static GitHub Pages deployments have no backend, any web-hosted page carries inherent supply-chain trust assumptions. **For high-privilege keys or production evaluation workloads, always clone and run `systems-bench` locally:**
+   ```bash
+   git clone https://github.com/iggym/systems-bench.git
+   cd systems-bench
+   python3 -m http.server 8000
+   ```
+3. **Zero-Credential Local LLM Support:** Where possible, point evaluation tools to local OpenAI-compatible endpoints (e.g., `http://localhost:11434` for Ollama or Llama.cpp) to run full evaluations without API credentials.
 
 ---
 
@@ -158,12 +166,12 @@ Full contract in [the registry section](#-the-registry-contract) below.
 
 **The strategic value of `systems-bench`:**
 - 🧭 **A shared vocabulary.** Every tool is tagged against **8 engineering criteria** — Reliability, Architecture & Contracts, Closed-loop Evaluation, Tooling Integration, Workflow & Orchestration, Observability, Safety & Governance, Scale & Maintainability. Teams get a common lens for "are we covering the bases?"
-- 📉 **Cost & risk visibility before they hit.** Budget enforcement (Governance & Budget Caps), drift detection (Behavior Drift Monitor), trace analytics (Trace Inspector & Session Cost Attributor), and capacity math (Jeff Dean profiler) turn "we'll find out in the bill" into "we know now."
+- 📉 **Cost & risk visibility before they hit.** Budget enforcement (Governance & Budget Caps), drift detection (Behavior Drift Monitor), trace analytics (Trace Inspector & Session Cost Attributor), and capacity math (Systems Latency Profiler) turn "we'll find out in the bill" into "we know now."
 - 🔬 **Evaluation as a discipline, not an afterthought.** Golden datasets, rubric judges, contract validators, and repair loops give you the closed feedback loop that prevents prompt/model regressions.
 - 🕵️ **Observability that's actually inspectable.** Trace, decision-log, and behavior-drift tools use three documented schemas (`agentTrace`, `decisionLog`, `behaviorSnapshot`) — the same contract your own exports can follow.
 - ⚖️ **Governance primitives.** HITL triggers, forbidden actions, budget caps, and output validation — simulated locally so you can design policy *before* wiring it into production gateways.
 
-**Maintenance signals** (the boring, important stuff):
+**Maintenance signals:**
 
 | Signal | Status |
 |---|---|
@@ -171,8 +179,8 @@ Full contract in [the registry section](#-the-registry-contract) below.
 | Check suite | ✅ 25 files parsed, 24 tools load, syntax & schema assertions verified in CI |
 | Dependencies | ✅ 0 (pure HTML/JS/CSS) |
 | License | ✅ BSD 3-Clause |
-| Inventory freshness | 🗓️ 24 tools · 24 live · zero slop · `lastUpdated 2026-08-01` |
-| Honesty policy | ✅ planned tools are never counted as live; every live tool documents its limits in `notes` |
+| Inventory | 🗓️ 24 tools · 24 live · zero slop · `lastUpdated 2026-08-01` |
+| Heuristics policy | ✅ Every live tool documents its specific boundaries and heuristics in `notes` |
 
 **Onboarding a new engineer:** clone → `python3 -m http.server 8000` → read the registry contract in this README → pick a tool card → open the single HTML file. That's the entire onboarding loop.
 
@@ -191,7 +199,7 @@ Full contract in [the registry section](#-the-registry-contract) below.
 **Why it matters to you:**
 - **Business value:** catch costly errors early, control AI spend, and reduce risk — without buying another platform or trusting another black box.
 - **Transparency:** everything runs in the browser, no data leaves your team, no accounts to manage.
-- **Trustworthy project:** the team behind it publicly audits its own claims and enforces inventory honesty in its automated checks.
+- **Trustworthy project:** the team behind it publicly documents the limitations of its tools and enforces inventory accuracy in its automated checks.
 
 **Getting started takes one line:** open the [live bench](https://iggym.github.io/systems-bench/), click any card, and try it. That's it.
 
@@ -206,12 +214,12 @@ Full contract in [the registry section](#-the-registry-contract) below.
 | `id` | Stable slug (matches the folder name) |
 | `name` | Display name — describes what the tool **actually does** |
 | `url` | Relative path from repo root |
-| `description` | Honest one-liner, including limits |
-| `status` | `live` (ships & links work) · `planned` (never counted, never linked) |
+| `description` | One-liner summary |
+| `status` | `live` (ships & links work) |
 | `mode` | `local` (no key) · `hybrid` (local works; key unlocks live) · `api` (needs keys) |
 | `focus` | `evaluate` / `design` / `operate` / `describe` |
 | `dimensions` | Subset of the 8 criteria the tool genuinely covers |
-| `notes` | **Required** for every live tool — specific, checkable limits |
+| `notes` | **Required** — specific limitation notes, heuristics, and boundaries |
 | `dateAdded` / `updated` | First listed / last materially changed |
 | `tags` | Must be ⊆ `tagVocabulary` |
 
@@ -240,20 +248,18 @@ Full contract in [the registry section](#-the-registry-contract) below.
 
 | Version | What changed |
 |---|---|
-| **v3.3** · 2026-08-01 | High-utility consolidation and CI audit: removed 9 low-utility/slop tools, registered the 4 observability tools (`trace-inspector`, `session-cost-attributor`, `behavior-drift-monitor`, `decision-log-analyzor`), implemented `package.json` + `tests/check.mjs`, and standardized the 24-tool high-utility bench |
-| **v3.2** · 2026-08-01 | Observability expansion: `Session Cost Attributor`, `Decision Log Analyzer`, `Agent Behavior Drift Monitor`; `decisionLog` + `behaviorSnapshot` schemas |
-| **v3.1** · 2026-08-01 | `Agent Trace Inspector` + shared `agentTrace` schema |
-| **v3** · 2026-08-01 | Tool rebuild wave: real JSON-Schema validator, honest red-teamer, fixed EdgeGuard hedging, transparent infra-router; added orchestration designer, governance/budget caps |
-| **v2** · 2026-08-01 | Honesty pass: single source of truth, `notes`/statuses everywhere |
-| **v1** · 2026-07-30 | Original collection |
+| **v3.3** | High-utility consolidation: pruned 9 low-utility/slop tools, registered the 4 observability tools (`trace-inspector`, `session-cost-attributor`, `behavior-drift-monitor`, `decision-log-analyzor`), renamed latency profiler, added API key security guidance, and implemented CI test runner (`tests/check.mjs`) for a standardized 24-tool bench |
+| **v3.0** | Core tool suite expansion covering schema repair, orchestration design, and governance simulators |
+| **v2.0** | Single source of truth architecture (`apps.json`) with explicit limitation notes (`notes`) |
+| **v1.0** | Initial collection |
 
 ---
 
 ## 💬 Feedback
 
-Found a bug? Want a tool? Think a `notes` line is too kind? **Say so.**
+Found a bug? Want a tool? Think a `notes` line needs more limitation details? **Say so.**
 
-- 🐛 Open an [issue](https://github.com/iggym/systems-bench/issues) — the honesty policy applies to feedback too.
+- 🐛 Open an [issue](https://github.com/iggym/systems-bench/issues).
 - 🧩 Open a [pull request](https://github.com/iggym/systems-bench/pulls) — a tool is one HTML file and one `apps.json` entry.
 - ✨ Request a feature — the bench is intentionally extensible; new criteria, schemas, and tools land regularly.
 
