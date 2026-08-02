@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Jeff Dean Latency &amp; Capacity Profiler</title>
+<title>Systems Latency &amp; Capacity Profiler</title>
 <style>
 :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -31,8 +31,11 @@ th:first-child,td:first-child{text-align:left}
 </style>
 </head>
 <body>
-<h1>Jeff Dean Latency &amp; Capacity Profiler</h1>
-<p class="sub">Back-of-the-envelope capacity math in the spirit of <i>Numbers Every Programmer Should Know</i>: in-flight bytes (bandwidth × RTT), per-request data volume, required bandwidth vs your NIC, IOPS vs disk limits, and a bottleneck diagnosis. Every number is an editable assumption — the outputs are order-of-magnitude planning figures, not benchmarks.</p>
+<h1>Systems Latency &amp; Capacity Profiler</h1>
+<p class="sub">Back-of-the-envelope capacity math inspired by <a href="https://research.google/people/jeff/" target="_blank" rel="noopener" style="color:var(--accent-signal);text-decoration:underline;">Jeff Dean</a>'s classic <a href="https://gist.github.com/jboner/2841832" target="_blank" rel="noopener" style="color:var(--accent-signal);text-decoration:underline;"><i>Numbers Every Programmer Should Know</i></a> (see also <a href="https://colin-scott.github.io/personal_website/research/interactive_latency.html" target="_blank" rel="noopener" style="color:var(--accent-signal);text-decoration:underline;">Interactive Latency Numbers</a>): in-flight bytes (bandwidth × RTT), per-request data volume, required bandwidth vs your NIC, IOPS vs disk limits, and a bottleneck diagnosis. Every number is an editable assumption — the outputs are order-of-magnitude planning figures, not benchmarks.</p>
+<div style="margin:12px 0 20px 0;padding:10px 14px;background:var(--bg-raised);border-left:3px solid var(--accent-signal);font-size:0.85rem;color:var(--text-mute);border-radius:var(--radius);">
+  <b style="color:var(--text);">📚 Reference Origin &amp; Online Resources:</b> Based on systems heuristics from Jeff Dean's keynote <a href="https://static.googleusercontent.com/media/research.google.com/en//people/jeff/stanford-295-talk.pdf" target="_blank" rel="noopener" style="color:var(--accent-signal);text-decoration:underline;"><i>Building Software Systems at Google and Lessons Learned</i> (Stanford CS295 slides)</a>, the canonical <a href="https://gist.github.com/jboner/2841832" target="_blank" rel="noopener" style="color:var(--accent-signal);text-decoration:underline;"><i>Latency Numbers Every Programmer Should Know</i></a> reference table, and Colin Scott's <a href="https://colin-scott.github.io/personal_website/research/interactive_latency.html" target="_blank" rel="noopener" style="color:var(--accent-signal);text-decoration:underline;">Interactive Latency Timeline</a>.
+</div>
 <div class="grid">
   <div class="card">
     <h3 style="font-size:.95rem;margin-bottom:4px">Workload</h3>
@@ -66,7 +69,7 @@ th:first-child,td:first-child{text-align:left}
   </div>
 </div>
 <script>
-// classic latency table (ns unless noted) — Jeff Dean era, lightly updated for NVMe
+// classic latency table (ns unless noted) — Systems era, lightly updated for NVMe
 const DEFAULTS = [
   ['L1 cache reference', 0.5, 'ns'],
   ['L2 cache reference', 7, 'ns'],
@@ -150,5 +153,5 @@ CAVEAT: order-of-magnitude planning only. Real systems add protocol overhead
 calc();
 renderRefs();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246deeda83c873d',t:'MTc4NTYwODU3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246deeda83c873d',t:'MTc4NTYwODU3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a24de9cee917f071',t:'MTc4NTY4MjQxOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
