@@ -306,9 +306,9 @@
     },
     {
       "id": "jeff-dean-latency-capacity-profiler",
-      "name": "Jeff Dean Latency & Capacity Profiler",
-      "url": "web-apps/jeff-dean-latency-capacity-profiler/index.html",
-      "description": "Back-of-the-envelope capacity math in the spirit of 'Numbers Every Programmer Should Know': in-flight bytes (bandwidth \u00d7 RTT), per-request data volume, required bandwidth vs your link, IOPS vs disk limits, a live-editable latency reference table, and a bottleneck diagnosis.",
+      "name": "Latency & Capacity Profiler",
+      "url": "web-apps/latency-capacity-profiler/index.html",
+      "description": "based on Jeff Dean's Back-of-the-envelope capacity math in the spirit of 'Numbers Every Programmer Should Know': in-flight bytes (bandwidth \u00d7 RTT), per-request data volume, required bandwidth vs your link, IOPS vs disk limits, a live-editable latency reference table, and a bottleneck diagnosis.",
       "tags": [
         "diagnostic",
         "capacity-planning",
