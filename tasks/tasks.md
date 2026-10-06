@@ -38,6 +38,11 @@
   (`latency` → latency profiler and EdgeGuard; `hitl` → governance and workflow designer), and remove
   anything still unused or mark it reserved.
 
+- [ ] 🔴 **S — Add the `schemas` block the README promises.** The README says the shared schemas
+  are "documented in `apps.json → schemas`," but there is no `schemas` key in `apps.json`. Add
+  `agentTrace` v1, `decisionLog` v1, and `behaviorSnapshot` v1 (fields + version), or fix the README.
+  *Done when:* the key exists and a test checks that it lists the three schemas.
+
 - [ ] 🟢 **S — Bump `lastUpdated`** in `apps.json` (still `2026-08-01`) and add a test that it is
   ≥ the newest `updated` date.
 
@@ -58,6 +63,10 @@
   `index.html` and check that it renders 24 cards and the filters work.
 - [ ] 🟠 **S — Update the GitHub Actions versions** from `actions/checkout@v3` / `setup-node@v3` to v4,
   and pin Node to the current LTS.
+- [ ] 🟠 **M — Unit-test the core heuristics.** Pull the pure functions out into testable form
+  (schema-subset validator, repair loop, critical-path calculation, drift statistics, Little's Law
+  math, PII regexes) and test them against fixtures, so a behavior change can't slip through silently.
+- [ ] 🟢 **S — Set `permissions: contents: read`** in `ci.yml` (least privilege for the workflow token).
 - [ ] 🟢 **S — Add an HTML validity / a11y lint** (e.g. `html-validate`, or `axe` in the Playwright
   run) as a non-blocking job first.
 - [ ] 🟢 **S — Add a Pages deploy workflow** that only publishes after checks pass (instead of the
@@ -82,6 +91,12 @@
 - [ ] 🟢 **S — Add a "Start here" strip** with three recommended entry tools for first-time visitors,
   plus links to the 8 criteria and the shared schemas.
 - [ ] 🟢 **M — Add a criteria coverage matrix page:** tools × 8 dimensions, generated from `apps.json`.
+- [ ] 🟠 **S — Accessibility pass on the bench.** Add visible `:focus-visible` styles to cards and inputs,
+  `aria-label`s on the search box and selects, and `aria-live` on the result count. Check the contrast
+  of `--text-mute` on cards, and test keyboard-only navigation.
+- [ ] 🟢 **S — Add a `404.html`** that links back to the bench.
+- [ ] 🟢 **M — Support a light theme** via `prefers-color-scheme` on the bench and the tools
+  (share the tokens from the §4 visual-system task).
 - [ ] 🟢 **S — Load fonts locally or add a system-font fallback**, so the bench makes no third-party
   requests (matching "nothing phones home"), or document the Google Fonts request in the README.
 
@@ -100,6 +115,11 @@
 - [ ] 🟢 **M — Support OpenAI-compatible local endpoints** (Ollama / llama.cpp at `localhost:11434`)
   in hybrid tools. The README recommends this, but most tools don't support it.
 - [ ] 🟢 **S — Add "Load sample" and "Copy/Download result"** buttons to every tool that's missing them.
+- [ ] 🟠 **S — Add a Content-Security-Policy `<meta>` to each tool** that limits `connect-src` to the
+  providers the tool actually calls (Gemini, Groq, and later localhost). This enforces the
+  "nothing phones home" claim in the browser, not just in the docs.
+- [ ] 🟢 **S — Add a `tool-template/index.html`** with the shared header and back link, the
+  sample/reset/export scaffolding, design tokens, and a limitations panel. New tools start from it.
 - [ ] 🟢 **M — Replace the token heuristic** (~1.33 tokens/word, used in several tools) with an
   optional bundled BPE tokenizer, keeping the heuristic as a labeled fallback.
 
@@ -117,7 +137,8 @@
 - [ ] 🟢 **S — Add `CONTRIBUTING.md`** (how to add a tool: one HTML file + one `apps.json` entry +
   `notes`; the honesty rules), issue/PR templates, and `CODE_OF_CONDUCT.md`.
 - [ ] 🟢 **S — Add `SECURITY.md`** covering API-key handling and how to report a vulnerability.
-- [ ] 🟢 **S — Generate the README's tool tables from `apps.json`** with a script, and fail CI if they
+- [ ] 🟢 **S — Generate the README's tool tables from `apps.json`** with a script (including the
+  hard-coded counts: "24 tools", "31 tags", the `lastUpdated` date, and the badge), and fail CI if they
   drift, so the "single source of truth" rule also covers the docs.
 - [ ] 🟢 **S — Add a `CHANGELOG.md`** and move the changelog table out of the README; tag releases
   (`v3.3.0` matches `package.json`).
@@ -128,6 +149,18 @@
 - [ ] 🟢 **S — Add an RSS/Atom feed** for new tools and articles.
 - [ ] 🟢 **S — Add GitHub topics and a social preview image** to the repo.
 - [ ] 🟢 **M — Add a "Request a tool" issue form** with fields that match the `apps.json` contract.
+
+- [ ] 🟢 **S — Trim `.gitignore`.** It's the generic Node template, and this repo has no build step.
+
+## 7. Tool roadmap (gaps against the 8 criteria)
+
+- [ ] 🟢 **M — Retry/backoff & rate-limit simulator** (TOL, REL): model retry storms, jitter, and
+  429 handling against a request log.
+- [ ] 🟢 **M — Tool-call permission / allowlist designer** (SAF, TOL): define per-tool scopes and
+  test a trace against them.
+- [ ] 🟢 **M — Eval run diff** (EVA): compare two golden-set or rubric runs and surface regressions.
+- [ ] 🟢 **M — OpenTelemetry GenAI → `agentTrace` converter** (OBS): turn standard OTel GenAI spans
+  into the bench's trace schema, so the observability tools work on real exports.
 
 ---
 

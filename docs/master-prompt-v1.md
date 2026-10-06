@@ -40,7 +40,7 @@ Project values you must reflect in every sentence:
 
 ## Inputs
 
-- ARTICLE_TYPE: {{tool-deep-dive | concept-explainer | workflow-recipe | comparison}}
+- ARTICLE_TYPE: {{tool-deep-dive | concept-explainer | workflow-recipe | comparison | criterion-guide | schema-guide | release-notes}}
 - PRIMARY_TOOL_ENTRY (verbatim apps.json object): {{PASTE_JSON}}
 - RELATED_TOOL_ENTRIES (optional, verbatim apps.json objects): {{PASTE_JSON_OR_NONE}}
 - TOOL_SOURCE (optional but recommended, the tool's index.html): {{PASTE_SOURCE_OR_NONE}}
@@ -141,6 +141,16 @@ prompt_version: "master-prompt-v1"
   schema-compatible per the inputs.
 - **comparison** — when to use tool A vs tool B (e.g. Context Compactor vs Compression Ratio
   Benchmarker; JSON Schema Contract Validator vs JSON Schema Repair Loop). Include a decision table.
+- **criterion-guide** — one of the 8 criteria (e.g. OBS). Cover every tool whose `dimensions`
+  include it; "How the tool works" becomes "What good looks like" for that criterion, followed by a
+  per-tool section and a gap list (what the bench does NOT cover for this criterion). Default
+  audience: engineering-leader.
+- **schema-guide** — one shared schema (`agentTrace` v1, `decisionLog` v1, `behaviorSnapshot` v1).
+  Field-by-field reference taken only from SHARED_SCHEMA, a minimal valid example, how to map
+  exports from a typical stack into it (labeled as guidance, not a supported integration), and
+  which bench tools consume it.
+- **release-notes** — summarize one changelog version using only the README changelog and the git
+  history you are given. 300–600 words; no forward-looking promises.
 
 ## Audience adaptation
 
@@ -165,6 +175,36 @@ Silently verify, then output only the article:
 
 Return ONLY the finished Markdown article (front matter + body). No preamble, no closing remarks.
 ````
+
+---
+
+## Article types at a glance
+
+| Type | Subject | Default audience | Default length |
+|---|---|---|---|
+| `tool-deep-dive` | one tool `id` | engineer | 1200–1800 words |
+| `concept-explainer` | an idea + the tools that demonstrate it | engineer | 1200–1800 words |
+| `workflow-recipe` | 2–4 chained tools | engineer | 1500–2200 words |
+| `comparison` | 2 overlapping tools | engineer | 900–1300 words |
+| `criterion-guide` | one of the 8 criteria (REL … SCL) | engineering-leader | 1000–1500 words |
+| `schema-guide` | `agentTrace` / `decisionLog` / `behaviorSnapshot` | engineer | 800–1200 words |
+| `release-notes` | one changelog version | mixed | 300–600 words |
+
+## Gathering inputs
+
+Always give the model real source material — never ask it to describe a tool from its name alone.
+Run from the repo root:
+
+```bash
+# PRIMARY_TOOL_ENTRY — one apps.json object
+node -e 'const d=require("./apps.json");console.log(JSON.stringify(d.apps.find(a=>a.id===process.argv[1]),null,2))' trace-inspector
+
+# RELATED_TOOL_ENTRIES for a criterion-guide — every tool with a given dimension
+node -e 'const d=require("./apps.json");console.log(JSON.stringify(d.apps.filter(a=>a.dimensions.includes(process.argv[1])),null,2))' observability
+
+# TOOL_SOURCE
+cat web-apps/trace-inspector/index.html
+```
 
 ---
 
@@ -200,3 +240,4 @@ Start with one deep-dive per tool (24 articles), then these cross-cutting pieces
 | Version | Change |
 |---|---|
 | v1 | Initial master prompt: grounding rules, required structure, article types, audience variants, backlog, review checklist |
+| v1.1 | Added `criterion-guide`, `schema-guide`, and `release-notes` types; article-types table; input-gathering commands |
