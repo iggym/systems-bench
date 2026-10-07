@@ -251,6 +251,7 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 
 | Version | What changed |
 |---|---|
+| **v3.4** | Trust fixes: real CI checks (registry contract, script syntax, links, privacy guards, fixtures); `schemas` block added to `apps.json`; fixed a syntax error that broke Context Compactor; removed injected third-party challenge scripts from 14 tools; MCP Client Inspector now emits valid Gemini schemas (enums, `required`, arrays of objects); JSON Schema Repair Loop no longer overwrites unrepairable fields, clamps bounds, and only accepts close enum matches; Agent Trace Inspector handles traces without `startedAt`; Adversarial Red-Teamer correctly marked `hybrid`; numeric card IDs on the bench; first six [articles](articles/) |
 | **v3.3** | High-utility consolidation: pruned 9 low-utility/slop tools, registered the 4 observability tools (`trace-inspector`, `session-cost-attributor`, `behavior-drift-monitor`, `decision-log-analyzor`), renamed latency profiler, added API key security guidance, and implemented CI test runner (`tests/check.mjs`) for a standardized 24-tool bench |
 | **v3.0** | Core tool suite expansion covering schema repair, orchestration design, and governance simulators |
 | **v2.0** | Single source of truth architecture (`apps.json`) with explicit limitation notes (`notes`) |

@@ -129,6 +129,80 @@
       ]
     }
   },
+  "schemas": {
+    "agentTrace": {
+      "version": 1,
+      "description": "One agent session as a tree of spans linked by parent id. Totals are plain sums over all spans, so do not put rolled-up child costs on parent spans.",
+      "root": {
+        "schemaVersion": "number (1)",
+        "session": "string",
+        "workflow": "string (optional)",
+        "spans": "span[] (required, non-empty)"
+      },
+      "span": {
+        "id": "string (unique; auto-assigned if missing)",
+        "parent": "string | null (null or unknown parent = root)",
+        "type": "llm | tool | loop | eval | handoff | plan | act (anything else is shown as 'other')",
+        "name": "string",
+        "startedAt": "ISO-8601 or epoch ms (optional; if no span has it, spans are laid out sequentially in tree order)",
+        "durationMs": "number",
+        "model": "string | null",
+        "tokensIn": "number",
+        "tokensOut": "number",
+        "costUsd": "number",
+        "status": "ok | error | timeout (default ok)",
+        "error": "string (optional)",
+        "input": "string (optional)",
+        "output": "string (optional)",
+        "attrs": "object (optional, free-form)"
+      },
+      "consumers": [
+        "trace-inspector",
+        "session-cost-attributor"
+      ],
+      "notes": "session-cost-attributor also accepts {sessions:[{session, workflow, spans}]} or a bare spans array."
+    },
+    "decisionLog": {
+      "version": 1,
+      "description": "Ordered agent decisions with stated confidence and the observed outcome, for calibration analysis.",
+      "root": {
+        "schemaVersion": "number (1)",
+        "session": "string",
+        "workflow": "string (optional)",
+        "decisions": "decision[] (required, non-empty; a bare array is also accepted)"
+      },
+      "decision": {
+        "step": "number",
+        "actor": "string (e.g. agent | tool | human)",
+        "decision": "string",
+        "optionsConsidered": "string[] (optional)",
+        "rationale": "string (optional)",
+        "confidence": "number 0..1",
+        "outcome": "success | failure",
+        "latencyMs": "number (optional)",
+        "costUsd": "number (optional)",
+        "error": "string (optional)"
+      },
+      "consumers": [
+        "decision-log-analyzor"
+      ]
+    },
+    "behaviorSnapshot": {
+      "version": 1,
+      "description": "Daily aggregate metrics for an agent, used to compare a baseline window against a recent window.",
+      "root": {
+        "schemaVersion": "number (1)",
+        "series": "point[] (required, >= 2 points)"
+      },
+      "point": {
+        "date": "YYYY-MM-DD",
+        "metrics": "object of metricName -> number; keys should be consistent across points"
+      },
+      "consumers": [
+        "behavior-drift-monitor"
+      ]
+    }
+  },
   "apps": [
     {
       "id": "adversarial-red-teamer",
@@ -676,7 +750,7 @@
       "id": "trace-inspector",
       "name": "Agent Trace Inspector",
       "url": "web-apps/trace-inspector/index.html",
-      "description": "Renders nested waterfall charts from agentTrace v1 JSON logs, calculates critical paths, displays span depth (plan, tool, eval, hitl), and aggregates tokens, duration, and cost.",
+      "description": "Renders nested waterfall charts from agentTrace v1 JSON logs, calculates the critical path (longest root-to-leaf duration chain), shows span types (plan, llm, tool, eval, loop, handoff, act), and aggregates tokens, duration, and cost.",
       "tags": [
         "observability",
         "metrics",
@@ -690,9 +764,9 @@
         "observability",
         "reliability"
       ],
-      "notes": "Runs 100% client-side. Validates and displays agentTrace v1 schema spans locally without transmitting trace telemetry to any third-party server.",
+      "notes": "Runs 100% client-side on exported agentTrace JSON; no live ingestion. Totals are plain sums over all spans, so parent spans carrying rolled-up child costs are double-counted. Unknown span types render as 'other'.",
       "dateAdded": "2026-08-01",
-      "updated": "2026-08-01"
+      "updated": "2026-10-06"
     },
     {
       "id": "workflow-orchestration-designer",
