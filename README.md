@@ -42,7 +42,7 @@ cd systems-bench
 python3 -m http.server 8000        # open http://localhost:8000
 ```
 
-Run the verification suite (syntax, link integrity, schema contract, and limitation notes on every tool):
+Run the verification suite (registry contract, inline-JS syntax, network honesty, shared schemas, tool-logic fixtures, and article metadata):
 
 ```bash
 npm test
@@ -88,8 +88,8 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
                                    ▼
    ┌──────────────────────────────────────────────────────────────┐
    │   tests/check.mjs   —   the CI gate                          │
-   │   apps.json contract · JS syntax · link integrity ·          │
-   │   schema verification · limitation notes enforced            │
+   │   apps.json contract · inline JS syntax · mode vs API calls  │
+   │   shared schemas · logic fixtures · no injected scripts      │
    └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -97,7 +97,7 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 
 - 🔒 **Explicit Limitation Notes (`notes` field)** — every tool documents its exact heuristics and boundaries (e.g., subset schema validation, lexical word-multiplier token estimates, regex limitations).
 - 🧩 **Single source of truth** — `apps.json` is the only inventory; the root bench renders directly from it.
-- 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool (syntax, load, schema verification).
+- 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool: registry contract, inline-script syntax, `mode` honesty (a `local` tool may not call a provider API), no third-party scripts, and logic fixtures for pure tool functions.
 - 🪶 **Grab-and-go** — each tool is one HTML file. Open it, use it, delete it. No framework, no build step, no vendor lock.
 
 > **📚 Origin & Reference Math for Systems Latency & Capacity Profiler:**  
@@ -179,10 +179,10 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 | Signal | Status |
 |---|---|
 | CI | ✅ GitHub Actions runs the full check suite on every push |
-| Check suite | ✅ 25 files parsed, 24 tools load, syntax & schema assertions verified in CI |
+| Check suite | ✅ 25 HTML files scanned, every inline script parsed, registry contract + schemas + fixtures asserted (`npm test`) |
 | Dependencies | ✅ 0 (pure HTML/JS/CSS) |
 | License | ✅ BSD 3-Clause |
-| Inventory | 🗓️ 24 tools · 24 live · zero slop · `lastUpdated 2026-08-01` |
+| Inventory | 🗓️ 24 tools · 24 live · `lastUpdated 2026-10-07` |
 | Heuristics policy | ✅ Every live tool documents its specific boundaries and heuristics in `notes` |
 
 **Onboarding a new engineer:** clone → `python3 -m http.server 8000` → read the registry contract in this README → pick a tool card → open the single HTML file. That's the entire onboarding loop.
@@ -210,7 +210,7 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 
 ## 📋 The registry contract
 
-`apps.json` is **versioned** (`registryVersion: 3`), declares the 8 engineering `dimensions`, 4 `focuses` (`evaluate · design · operate · describe`), a canonical `tagVocabulary` (31 tags), and the shared `schemas` — all enforced by `tests/check.mjs`.
+`apps.json` is **versioned** (`registryVersion: 3`), declares the 8 engineering `dimensions`, 3 `focuses` (`evaluate · design · operate`), a canonical `tagVocabulary` (30 tags, every one in use), and the shared `schemas` — all enforced by `tests/check.mjs`.
 
 | Field | Meaning |
 |---|---|
@@ -220,10 +220,10 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 | `description` | One-liner summary |
 | `status` | `live` (ships & links work) |
 | `mode` | `local` (no key) · `hybrid` (local works; key unlocks live) · `api` (needs keys) |
-| `focus` | `evaluate` / `design` / `operate` / `describe` |
+| `focus` | `evaluate` / `design` / `operate` |
 | `dimensions` | Subset of the 8 criteria the tool genuinely covers |
 | `notes` | **Required** — specific limitation notes, heuristics, and boundaries |
-| `dateAdded` / `updated` | First listed / last materially changed |
+| `dateAdded` / `updated` | **Required** — first listed / last materially changed (`updated ≥ dateAdded`, `≤ lastUpdated`) |
 | `tags` | Must be ⊆ `tagVocabulary` |
 
 **The 8 engineering criteria:**
