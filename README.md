@@ -210,7 +210,7 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 
 ## 📋 The registry contract
 
-`apps.json` is **versioned** (`registryVersion: 3`), declares the 8 engineering `dimensions`, 3 `focuses` (`evaluate · design · operate`), a canonical `tagVocabulary` (30 tags, every one in use), and the shared `schemas` — all enforced by `tests/check.mjs`.
+`apps.json` is **versioned** (`registryVersion: 3`), declares the 8 engineering `dimensions`, 3 `focuses` (`evaluate · design · operate`), a canonical `tagVocabulary` (31 tags, every one in use), and the shared `schemas` — all enforced by `tests/check.mjs`.
 
 | Field | Meaning |
 |---|---|

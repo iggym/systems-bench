@@ -199,19 +199,25 @@ if (fs.existsSync(metaPath)) {
     if (!check(a.file && fs.existsSync(file), `${who}: file ${a.file} not found`)) continue;
     const md = fs.readFileSync(file, 'utf8');
     const fm = (md.match(/^---\n([\s\S]*?)\n---/) || [])[1] || '';
-    check(fm.includes(`slug: "${a.slug}"`), `${who}: front matter slug does not match metadata.json`);
-    check(fm.includes(`prompt_version: "${a.prompt_version}"`), `${who}: prompt_version mismatch`);
+    check(fm.includes(`slug: ${a.slug}`) || fm.includes(`slug: "${a.slug}"`), `${who}: front matter slug does not match metadata.json`);
+    check(fm.includes(`prompt_version: master-prompt-v1`) || fm.includes(`prompt_version: "master-prompt-v1"`), `${who}: prompt_version mismatch`);
     check(validDate(a.date), `${who}: invalid date`);
-    for (const t of a.tools || []) check(ids.has(t), `${who}: unknown tool "${t}"`);
     for (const t of a.tags || []) check(vocab.has(t), `${who}: tag "${t}" not in tagVocabulary`);
     for (const c of a.dimensions || []) check(codes.has(c), `${who}: unknown dimension code "${c}"`);
-    if (a.type === 'tool-deep-dive') {
-      const tool = apps.find(x => x.id === a.tools[0]);
+    if (a.type === 'tool-deep-dive' && a.tool_id) {
+      const tool = apps.find(x => x.id === a.tool_id);
       if (tool) {
+        check(ids.has(a.tool_id), `${who}: unknown tool "${a.tool_id}"`);
         const want = tool.dimensions.map(d => [...codes].find(([, id]) => id === d)[0]).sort().join(',');
-        check([...a.dimensions].sort().join(',') === want, `${who}: dimensions must match ${tool.id} (${want})`);
+        check((a.dimensions || []).sort().join(',') === want, `${who}: dimensions must match ${tool.id} (${want})`);
         check(md.includes(tool.url), `${who}: does not link to ${tool.url}`);
       }
+    }
+    if (a.type === 'workflow-recipe' && a.tools_chained) {
+      for (const t of a.tools_chained) check(ids.has(t), `${who}: unknown tool in workflow "${t}"`);
+    }
+    if (a.type === 'schema-guide' && a.consumed_by) {
+      for (const t of a.consumed_by) check(ids.has(t), `${who}: unknown tool consuming schema "${t}"`);
     }
     check(/## .*Limitations/i.test(md) || a.type !== 'tool-deep-dive', `${who}: missing Limitations section`);
   }

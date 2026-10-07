@@ -263,7 +263,8 @@
       "tags": [
         "observability",
         "evaluations",
-        "metrics"
+        "metrics",
+        "schemas"
       ],
       "status": "live",
       "mode": "local",
@@ -574,7 +575,8 @@
       "tags": [
         "cost",
         "observability",
-        "metrics"
+        "metrics",
+        "schemas"
       ],
       "status": "live",
       "mode": "local",
@@ -595,7 +597,8 @@
       "tags": [
         "observability",
         "metrics",
-        "diagnostic"
+        "diagnostic",
+        "schemas"
       ],
       "status": "live",
       "mode": "local",
@@ -657,6 +660,7 @@
     "proxy",
     "rubrics",
     "safety",
+    "schemas",
     "security",
     "state",
     "testing",
