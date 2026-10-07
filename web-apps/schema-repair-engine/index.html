@@ -88,31 +88,32 @@ th{color:var(--muted);text-transform:uppercase;font-size:.65rem;letter-spacing:.
     <table id="logTable"></table>
     <label style="margin-top:12px">Repaired payload</label>
     <pre id="outPayload"></pre>
-    <p class="hint">Repair rules are conservative: string→number coercion, enum nearest-match (Levenshtein) with fallback to schema default, required-key insertion from <span class="mono" style="font-family:var(--mono)">default</span> (or a marked null placeholder), and extra-property stripping only when <span class="mono" style="font-family:var(--mono)">additionalProperties: false</span>. Unresolvable violations stop the loop and are listed.</p>
+    <p class="hint">Repair rules are conservative: string→number coercion, enum nearest-match (case-insensitive Levenshtein, accepted only within ⌊len/3⌋ edits) with fallback to schema default, numeric clamping to minimum/maximum, required-key insertion from <span class="mono" style="font-family:var(--mono)">default</span> (no default → reported, never invented), and extra-property stripping only when <span class="mono" style="font-family:var(--mono)">additionalProperties: false</span>. Unresolvable violations stop the loop and are listed.</p>
   </div>
 </div>
 <script>
+// @pure-start — validation + repair core; tests/check.mjs evaluates this block directly
 const typeOf = v => v === null ? 'null' : Array.isArray(v) ? 'array' : Number.isInteger(v) ? 'integer' : typeof v;
 const TYPES = { string:['string'], integer:['integer'], number:['number','integer'], boolean:['boolean'], object:['object'], array:['array'], 'null':['null'] };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
+// Every violation carries the sub-schema it failed against, so repairs can read bounds/defaults.
 function collect(node, schema, path, out) {
+  const push = v => out.push(Object.assign({ path, schema }, v));
   if (schema.type !== undefined) {
     const g = TYPES[schema.type] || [schema.type];
-    if (!g.includes(typeOf(node))) out.push({ path, code: 'TYPE', expected: schema.type, actual: typeOf(node) });
+    if (!g.includes(typeOf(node))) push({ code: 'TYPE', expected: schema.type, actual: typeOf(node) });
   }
-  if (Array.isArray(schema.enum) && !schema.enum.includes(node))
-    out.push({ path, code: 'ENUM', expected: schema.enum, actual: node });
-  if (schema.const !== undefined && node !== schema.const)
-    out.push({ path, code: 'CONST', expected: schema.const, actual: node });
+  if (Array.isArray(schema.enum) && !schema.enum.includes(node)) push({ code: 'ENUM', expected: schema.enum, actual: node });
+  if (schema.const !== undefined && node !== schema.const) push({ code: 'CONST', expected: schema.const, actual: node });
   if (typeOf(node) === 'string') {
-    if (typeof schema.minLength === 'number' && node.length < schema.minLength) out.push({ path, code: 'MIN_LENGTH' });
-    if (typeof schema.maxLength === 'number' && node.length > schema.maxLength) out.push({ path, code: 'MAX_LENGTH' });
-    if (schema.pattern) { try { if (!new RegExp(schema.pattern).test(node)) out.push({ path, code: 'PATTERN' }); } catch (e) {} }
+    if (typeof schema.minLength === 'number' && node.length < schema.minLength) push({ code: 'MIN_LENGTH' });
+    if (typeof schema.maxLength === 'number' && node.length > schema.maxLength) push({ code: 'MAX_LENGTH' });
+    if (schema.pattern) { try { if (!new RegExp(schema.pattern).test(node)) push({ code: 'PATTERN' }); } catch (e) {} }
   }
   if (typeOf(node) === 'number' || typeOf(node) === 'integer') {
-    if (typeof schema.minimum === 'number' && node < schema.minimum) out.push({ path, code: 'MIN' });
-    if (typeof schema.maximum === 'number' && node > schema.maximum) out.push({ path, code: 'MAX' });
+    if (typeof schema.minimum === 'number' && node < schema.minimum) push({ code: 'MIN' });
+    if (typeof schema.maximum === 'number' && node > schema.maximum) push({ code: 'MAX' });
   }
   if (typeOf(node) === 'object' && schema.properties) {
     (schema.required || []).forEach(k => { if (!(k in node)) out.push({ path: path ? path + '.' + k : k, code: 'MISSING', prop: k, schema: schema.properties[k] }); });
@@ -134,26 +135,28 @@ function lev(a, b) {
     dp[i][j] = Math.min(dp[i-1][j] + 1, dp[i][j-1] + 1, dp[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
   return dp[m][n];
 }
-const nearest = (v, enums) => enums.reduce((best, e) => {
-  const d = lev(String(v).toLowerCase(), String(e).toLowerCase());
-  return d < best.d ? { e, d } : best;
-}, { e: null, d: Infinity });
-
+// Nearest enum value, accepted only when close: case-insensitive edit distance ≤ max(1, ⌊len/3⌋).
+const nearest = (v, enums) => {
+  const best = enums.reduce((acc, e) => {
+    const d = lev(String(v).toLowerCase(), String(e).toLowerCase());
+    return d < acc.d ? { e, d } : acc;
+  }, { e: null, d: Infinity });
+  return best.e !== null && best.d <= Math.max(1, Math.floor(String(best.e).length / 3)) ? best : { e: null, d: best.d };
+};
+const pathParts = path => path.replace(/^\$\.?/, '').split(/\.|\[(\d+)\]/).filter(Boolean).map(p => /^\d+$/.test(p) ? Number(p) : p);
+function getPath(obj, path) { let c = obj; for (const k of pathParts(path)) c = c == null ? undefined : c[k]; return c; }
 function setPath(obj, path, fn) {
-  const parts = path.replace(/^\$\.?/, '').split(/\.|\[(\d+)\]/).filter(Boolean);
+  const parts = pathParts(path);
   let cur = obj;
-  for (let i = 0; i < parts.length - 1; i++) {
-    const p = /^\d+$/.test(parts[i]) ? Number(parts[i]) : parts[i];
-    cur = cur[p];
-  }
-  const last = /^\d+$/.test(parts[parts.length - 1]) ? Number(parts[parts.length - 1]) : parts[parts.length - 1];
-  fn(cur, last);
+  for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]];
+  fn(cur, parts[parts.length - 1]);
 }
-
 function coerce(value, type) {
+  if (value === null || value === undefined) return null; // never invent a value from nothing
   if (type === 'integer' || type === 'number') {
+    if (typeof value !== 'string' && typeof value !== 'number') return null;
     const n = Number(String(value).replace(/,/g, ''));
-    if (isNaN(n)) return null;
+    if (String(value).trim() === '' || isNaN(n)) return null;
     return type === 'integer' ? Math.trunc(n) : n;
   }
   if (type === 'boolean') {
@@ -161,9 +164,70 @@ function coerce(value, type) {
     if (value === false || value === 'false' || value === '0') return false;
     return null;
   }
-  if (type === 'string') return String(value);
+  if (type === 'string') return (typeof value === 'number' || typeof value === 'boolean') ? String(value) : null;
   return null;
 }
+
+// Picks a repair for one violation, or { unresolved } when there is no safe one.
+function planRepair(v, value) {
+  const sub = v.schema || {};
+  switch (v.code) {
+    case 'TYPE': {
+      const fixed = coerce(value, v.expected);
+      return fixed !== null && (TYPES[v.expected] || [v.expected]).includes(typeOf(fixed))
+        ? { rule: 'coerce ' + v.actual + ' → ' + v.expected, to: fixed }
+        : { rule: 'no safe coercion ' + v.actual + ' → ' + v.expected + ' (UNRESOLVED)', unresolved: true };
+    }
+    case 'ENUM': {
+      const nm = nearest(value, v.expected);
+      if (nm.e !== null) return { rule: `enum nearest-match → "${nm.e}" (distance ${nm.d})`, to: nm.e };
+      if (sub.default !== undefined) return { rule: `enum default → "${sub.default}"`, to: sub.default };
+      return { rule: 'no close enum match and no default (UNRESOLVED)', unresolved: true };
+    }
+    case 'MISSING':
+      return sub.default !== undefined
+        ? { rule: 'insert required from default', to: sub.default }
+        : { rule: 'required key has no default (UNRESOLVED)', unresolved: true };
+    case 'EXTRA': return { rule: 'strip additional property', remove: true };
+    case 'MIN': return { rule: 'clamp to minimum ' + sub.minimum, to: sub.minimum };
+    case 'MAX': return { rule: 'clamp to maximum ' + sub.maximum, to: sub.maximum };
+    default: return { rule: 'no safe repair (' + v.code + ', UNRESOLVED)', unresolved: true };
+  }
+}
+
+// Validate → repair → re-validate until clean, no progress, or maxPasses. Pure: never mutates input.
+function repairLoop(schema, payload, maxPasses) {
+  const log = [];
+  let current = JSON.parse(JSON.stringify(payload));
+  let passes = 0, repairs = 0, converged = false;
+  while (passes < maxPasses) {
+    const viols = [];
+    collect(current, schema, '$', viols);
+    if (!viols.length) { converged = true; break; }
+    passes++;
+    let changed = false;
+    for (const v of viols) {
+      const value = v.path === '$' ? current : getPath(current, v.path);
+      const r = planRepair(v, value);
+      if (r.unresolved) {
+        if (!log.some(l => l.unresolved && l.path === v.path && l.code === v.code))
+          log.push({ pass: passes, path: v.path, code: v.code, rule: r.rule, before: JSON.stringify(value), after: '(unchanged)', unresolved: true });
+        continue;
+      }
+      if (v.path === '$') continue; // never replace the root
+      setPath(current, v.path, (obj, key) => { if (r.remove) delete obj[key]; else obj[key] = r.to; });
+      log.push({ pass: passes, path: v.path, code: v.code, rule: r.rule, before: JSON.stringify(value), after: r.remove ? '(removed)' : JSON.stringify(r.to) });
+      repairs++;
+      changed = true;
+    }
+    if (!changed) break; // only unresolved violations left — stop rather than guess
+  }
+  if (!converged) { const left = []; collect(current, schema, '$', left); converged = !left.length; }
+  const residual = [];
+  collect(current, schema, '$', residual);
+  return { current, log, passes, repairs, converged, residual };
+}
+// @pure-end
 
 function runRepairLoop() {
   const badge = document.getElementById('statusBadge');
@@ -171,75 +235,22 @@ function runRepairLoop() {
   try { schema = JSON.parse(document.getElementById('schemaInput').value); } catch (e) { badge.textContent = 'BAD SCHEMA'; badge.className='badge b-err'; return; }
   try { payload = JSON.parse(document.getElementById('payloadInput').value); } catch (e) { badge.textContent = 'BAD PAYLOAD'; badge.className='badge b-err'; return; }
   const maxPasses = Math.max(1, parseInt(document.getElementById('maxPasses').value) || 3);
-
-  const log = [];
-  let current = JSON.parse(JSON.stringify(payload));
-  let pass = 0, totalRepairs = 0, converged = false;
-
-  for (; pass < maxPasses; pass++) {
-    const viols = [];
-    collect(current, schema, '$', viols);
-    if (!viols.length) { converged = true; break; }
-
-    let changed = false;
-    for (const v of viols) {
-      const value = v.path === '$' ? current : (() => { try { const parts = v.path.replace(/^\$\.?/,'').split(/\.|\[(\d+)\]/).filter(Boolean); let c = current; for (const p of parts) { const k = /^\d+$/.test(p)?Number(p):p; c = c?.[k]; } return c; } catch(e){ return undefined; } })();
-      let repair = null;
-      if (v.code === 'TYPE') {
-        const fixed = coerce(value, v.expected);
-        if (fixed !== null && typeOf(fixed) === v.expected) repair = { rule: 'coerce ' + v.actual + ' → ' + v.expected, to: fixed };
-      } else if (v.code === 'ENUM') {
-        const nm = nearest(value, v.expected);
-        const def = v.schema && v.schema.default;
-        repair = nm.e !== null ? { rule: `enum nearest-match → "${nm.e}"`, to: nm.e } : (def !== undefined ? { rule: `enum default → "${def}"`, to: def } : null);
-      } else if (v.code === 'MISSING') {
-        const sub = v.schema;
-        if (sub && sub.default !== undefined) repair = { rule: 'insert required from default', to: sub.default, insert: true };
-        else repair = { rule: 'insert required as null (UNRESOLVED — no default)', to: null, insert: true, unresolved: true };
-      } else if (v.code === 'EXTRA') {
-        repair = { rule: 'strip additional property', to: 'REMOVE', remove: true };
-      } else if (v.code === 'MIN') { repair = { rule: 'clamp to minimum', to: v.schema ? (typeof v.schema.minimum === 'number' ? v.schema.minimum : value) : value }; }
-      else if (v.code === 'MAX') { repair = { rule: 'clamp to maximum', to: v.schema ? (typeof v.schema.maximum === 'number' ? v.schema.maximum : value) : value }; }
-      else if (v.code === 'MIN_LENGTH' || v.code === 'MAX_LENGTH' || v.code === 'PATTERN' || v.code === 'CONST' || v.code === 'MIN_ITEMS' || v.code === 'MAX_ITEMS') {
-        repair = { rule: 'no safe repair — unresolved (' + v.code + ')', unresolved: true };
-      }
-      if (repair) {
-        const before = v.path === '$' ? JSON.stringify(current) : JSON.stringify(value);
-        setPath(current, v.path, (obj, key) => {
-          if (repair.insert) obj[key] = repair.to;
-          else if (repair.remove) delete obj[key];
-          else obj[key] = repair.to;
-        });
-        log.push({ pass: pass + 1, path: v.path, code: v.code, rule: repair.rule, before, after: v.path === '$' ? JSON.stringify(current) : JSON.stringify((() => { try { const parts = v.path.replace(/^\$\.?/,'').split(/\.|\[(\d+)\]/).filter(Boolean); let c = current; for (const p of parts) { const k = /^\d+$/.test(p)?Number(p):p; c = c?.[k]; } return c; } catch(e){ return '?'; } })()) });
-        totalRepairs++;
-        changed = true;
-      }
-    }
-    if (!changed) break; // no repair made progress
-  }
-
-  const residual = [];
-  collect(current, schema, '$', residual);
-  const unresolved = log.filter(l => l.rule.includes('UNRESOLVED'));
-
-  badge.textContent = converged ? 'CONVERGED' : 'MAX PASSES / UNRESOLVED';
+  const { current, log, passes, repairs, converged, residual } = repairLoop(schema, payload, maxPasses);
+  const unresolved = log.filter(l => l.unresolved);
+  badge.textContent = converged ? 'CONVERGED' : (unresolved.length ? 'STOPPED — UNRESOLVED' : 'MAX PASSES');
   badge.className = converged ? 'badge b-ok' : (unresolved.length ? 'badge b-warn' : 'badge b-err');
-  document.getElementById('sPasses').textContent = 'passes: ' + Math.min(pass + 1, maxPasses);
-  document.getElementById('sRepairs').textContent = 'repairs: ' + totalRepairs;
+  document.getElementById('sPasses').textContent = 'passes: ' + passes;
+  document.getElementById('sRepairs').textContent = 'repairs: ' + repairs;
   document.getElementById('sResid').textContent = 'residual violations: ' + residual.length;
   document.getElementById('sConv').textContent = converged ? 'converged: yes' : 'converged: no';
-
   document.getElementById('logTable').innerHTML = '<tr><th>Pass</th><th>Path</th><th>Code</th><th>Rule</th><th>Before → After</th></tr>' +
     log.map(l => `<tr><td>${l.pass}</td><td class="mono" style="font-family:var(--mono)">${esc(l.path)}</td><td>${esc(l.code)}</td><td>${esc(l.rule)}</td><td>${esc((l.before || '').slice(0,60))} → ${esc((l.after || '').slice(0,60))}</td></tr>`).join('') ||
     '<tr><td colspan="5" class="hint">no repairs needed — payload already valid</td></tr>';
-
   document.getElementById('outPayload').textContent = JSON.stringify(current, null, 2);
-
   if (unresolved.length) {
-    document.getElementById('logTable').innerHTML += `<tr><td colspan="5" class="hint" style="color:var(--warn)">⚠ ${unresolved.length} violation(s) could not be safely auto-repaired (marked above). The loop stops rather than guessing.</td></tr>`;
+    document.getElementById('logTable').innerHTML += `<tr><td colspan="5" class="hint" style="color:var(--warn)">⚠ ${unresolved.length} violation(s) could not be safely auto-repaired (marked above) and were left as-is. The loop stops rather than guessing.</td></tr>`;
   }
 }
-
 async function copyOut() {
   const t = document.getElementById('outPayload').textContent;
   if (!t || t.startsWith('Paste') || t.startsWith('Click')) return;
@@ -247,5 +258,5 @@ async function copyOut() {
   else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); document.getElementById('statusBadge').textContent = 'COPIED'; }
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246d56afba64758',t:'MTc4NTYwODE4Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

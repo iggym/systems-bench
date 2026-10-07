@@ -62,7 +62,7 @@ select{background:#010409;border:1px solid var(--border);color:var(--text);paddi
   <div class="card">
     <label>Compiled schema</label>
     <textarea id="output" readonly></textarea>
-    <p class="hint">Drop OpenAI output into your client's <code>tools</code> array; Gemini output into <code>tools.declarations</code>. Nested objects and arrays are recursed automatically; <code>required</code> arrays are emitted only when non-empty.</p>
+    <p class="hint">Drop OpenAI output into your client's <code>tools</code> array; Gemini output into <code>tools.declarations</code>. Nested objects and arrays (including arrays of objects) are recursed automatically; <code>required</code> arrays are emitted only when non-empty. Gemini output omits <code>default</code>.</p>
   </div>
 </div>
 <script>
@@ -71,68 +71,50 @@ const outputEl = document.getElementById('output');
 const statusEl = document.getElementById('status');
 const formatSel = document.getElementById('formatSel');
 
+// @pure-start — conversion core; tests/check.mjs evaluates this block directly
 function jsonType(t) { return t || 'string'; }
 
-// recursively build OpenAI parameters from an args spec
-function buildOpenAIProps(spec) {
-  const props = {}, required = [];
-  for (const [key, val] of Object.entries(spec || {})) {
-    const p = { type: jsonType(val.type) };
-    if (val.description) p.description = val.description;
-    if (val.enum) p.enum = val.enum;
-    if (val.default !== undefined) p.default = val.default;
-    if (val.type === 'object' && val.properties) {
-      const nested = buildOpenAIProps(val.properties);
-      p.properties = nested.properties;
-      if (nested.required.length) p.required = nested.required;
-    }
-    if (val.type === 'array' && val.items) {
-      p.items = { type: jsonType(val.items.type) };
-      if (val.items.enum) p.items.enum = val.items.enum;
-      if (val.items.type === 'object' && val.items.properties) {
-        const nested = buildOpenAIProps(val.items.properties);
-        p.items.properties = nested.properties;
-        if (nested.required.length) p.items.required = nested.required;
-      }
-    }
-    props[key] = p;
-    if (val.required === true || val.required === 'true') required.push(key);
+// Recursively converts one arg spec into a JSON-Schema-style node.
+// flavor 'openai' keeps lowercase types and defaults; 'gemini' uppercases types (OpenAPI
+// Schema subset used by FunctionDeclaration) and omits `default`.
+function buildNode(val, flavor) {
+  const gemini = flavor === 'gemini';
+  const p = { type: gemini ? jsonType(val.type).toUpperCase() : jsonType(val.type) };
+  if (val.description) p.description = val.description;
+  if (Array.isArray(val.enum)) p.enum = val.enum.slice();
+  if (!gemini && val.default !== undefined) p.default = val.default;
+  if (val.type === 'object' && val.properties) {
+    const nested = buildProps(val.properties, flavor);
+    p.properties = nested.properties;
+    if (nested.required.length) p.required = nested.required;
   }
-  return { properties: props, required };
+  if (val.type === 'array' && val.items) p.items = buildNode(val.items, flavor);
+  return p;
 }
 
-function buildGemini(spec) {
-  return (Object.entries(spec || {})).map(([key, val]) => {
-    const p = { name: key, type: jsonType(val.type).toUpperCase() };
-    if (val.description) p.description = val.description;
-    if (val.enum) p.enum = val.enum;
-    if (val.type === 'object' && val.properties) p.properties = buildGemini(val.properties);
-    if (val.type === 'array' && val.items) p.items = buildGemini({ item: val.items })[0].properties ? buildGemini({ item: val.items })[0].properties : { type: jsonType(val.items.type).toUpperCase() };
-    return p;
-  });
+// Builds a { properties, required } pair from an args map.
+function buildProps(spec, flavor) {
+  const properties = {}, required = [];
+  for (const [key, val] of Object.entries(spec || {})) {
+    properties[key] = buildNode(val || {}, flavor);
+    if (val && (val.required === true || val.required === 'true')) required.push(key);
+  }
+  return { properties, required };
 }
+
+function compileTool(raw, flavor) {
+  const args = raw.args || raw.parameters || {};
+  const nested = buildProps(args, flavor);
+  const parameters = { type: flavor === 'gemini' ? 'OBJECT' : 'object', properties: nested.properties };
+  if (nested.required.length) parameters.required = nested.required;
+  return { name: raw.name || 'unnamed_tool', description: raw.description || '', parameters };
+}
+// @pure-end
 
 function compileSchema() {
   try {
     const raw = JSON.parse(inputEl.value);
-    const args = raw.args || raw.parameters || {};
-    if (formatSel.value === 'openai') {
-      const nested = buildOpenAIProps(args);
-      const schema = {
-        name: raw.name || 'unnamed_tool',
-        description: raw.description || '',
-        parameters: { type: 'object', properties: nested.properties }
-      };
-      if (nested.required.length) schema.parameters.required = nested.required;
-      outputEl.value = JSON.stringify(schema, null, 2);
-    } else {
-      const decl = {
-        name: raw.name || 'unnamed_tool',
-        description: raw.description || '',
-        parameters: { type: 'OBJECT', properties: buildGemini(args) }
-      };
-      outputEl.value = JSON.stringify(decl, null, 2);
-    }
+    outputEl.value = JSON.stringify(compileTool(raw, formatSel.value), null, 2);
     statusEl.textContent = 'COMPILED';
     statusEl.className = 'badge b-ok';
   } catch (err) {
@@ -150,5 +132,5 @@ inputEl.addEventListener('input', compileSchema);
 formatSel.addEventListener('change', compileSchema);
 compileSchema();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a23f6e86ae7538db',t:'MTc4NTUzMDU2OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
