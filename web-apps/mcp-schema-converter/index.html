@@ -101,15 +101,24 @@ function buildOpenAIProps(spec) {
   return { properties: props, required };
 }
 
+// Gemini Schema: same shape as OpenAI (properties is a name→schema map plus a required list),
+// but with upper-case OpenAPI type names. Enums are kept on STRING fields.
+function geminiSchema(val) {
+  const p = { type: jsonType(val.type).toUpperCase() };
+  if (val.description) p.description = val.description;
+  if (val.enum) { p.enum = val.enum.map(String); if (p.type === 'STRING') p.format = 'enum'; }
+  if (val.type === 'object' && val.properties) Object.assign(p, buildGemini(val.properties));
+  if (val.type === 'array' && val.items) p.items = geminiSchema(val.items);
+  return p;
+}
+
 function buildGemini(spec) {
-  return (Object.entries(spec || {})).map(([key, val]) => {
-    const p = { name: key, type: jsonType(val.type).toUpperCase() };
-    if (val.description) p.description = val.description;
-    if (val.enum) p.enum = val.enum;
-    if (val.type === 'object' && val.properties) p.properties = buildGemini(val.properties);
-    if (val.type === 'array' && val.items) p.items = buildGemini({ item: val.items })[0].properties ? buildGemini({ item: val.items })[0].properties : { type: jsonType(val.items.type).toUpperCase() };
-    return p;
-  });
+  const properties = {}, required = [];
+  for (const [key, val] of Object.entries(spec || {})) {
+    properties[key] = geminiSchema(val);
+    if (val.required === true || val.required === 'true') required.push(key);
+  }
+  return required.length ? { properties, required } : { properties };
 }
 
 function compileSchema() {
@@ -129,7 +138,7 @@ function compileSchema() {
       const decl = {
         name: raw.name || 'unnamed_tool',
         description: raw.description || '',
-        parameters: { type: 'OBJECT', properties: buildGemini(args) }
+        parameters: Object.assign({ type: 'OBJECT' }, buildGemini(args))
       };
       outputEl.value = JSON.stringify(decl, null, 2);
     }
@@ -150,5 +159,5 @@ inputEl.addEventListener('input', compileSchema);
 formatSel.addEventListener('change', compileSchema);
 compileSchema();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a23f6e86ae7538db',t:'MTc4NTUzMDU2OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

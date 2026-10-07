@@ -42,7 +42,7 @@ cd systems-bench
 python3 -m http.server 8000        # open http://localhost:8000
 ```
 
-Run the verification suite (syntax, link integrity, schema contract, and limitation notes on every tool):
+Run the verification suite — registry contract (fields, enums, tags, dimensions, dates, shared schemas, no orphan folders), inline-script syntax in all 25 HTML files, local link integrity, no external scripts or tracking snippets, `local` tools never calling model APIs, tool fixtures, and article metadata:
 
 ```bash
 npm test
@@ -97,7 +97,7 @@ You get a waterfall timeline, critical-path highlighting, token/cost/status aggr
 
 - 🔒 **Explicit Limitation Notes (`notes` field)** — every tool documents its exact heuristics and boundaries (e.g., subset schema validation, lexical word-multiplier token estimates, regex limitations).
 - 🧩 **Single source of truth** — `apps.json` is the only inventory; the root bench renders directly from it.
-- 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool (syntax, load, schema verification).
+- 🧪 **Reproducible** — `npm test` runs deterministic checks on every tool (registry contract, script syntax, links, privacy guards, fixtures).
 - 🪶 **Grab-and-go** — each tool is one HTML file. Open it, use it, delete it. No framework, no build step, no vendor lock.
 
 > **📚 Origin & Reference Math for Systems Latency & Capacity Profiler:**  
@@ -179,10 +179,10 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 | Signal | Status |
 |---|---|
 | CI | ✅ GitHub Actions runs the full check suite on every push |
-| Check suite | ✅ 25 files parsed, 24 tools load, syntax & schema assertions verified in CI |
+| Check suite | ✅ 25 HTML files parsed (inline-script syntax, local links, no third-party scripts), registry contract and shared schemas enforced, tool fixtures run in CI |
 | Dependencies | ✅ 0 (pure HTML/JS/CSS) |
 | License | ✅ BSD 3-Clause |
-| Inventory | 🗓️ 24 tools · 24 live · zero slop · `lastUpdated 2026-08-01` |
+| Inventory | 🗓️ 24 tools · 24 live · zero slop · `lastUpdated 2026-10-06` |
 | Heuristics policy | ✅ Every live tool documents its specific boundaries and heuristics in `notes` |
 
 **Onboarding a new engineer:** clone → `python3 -m http.server 8000` → read the registry contract in this README → pick a tool card → open the single HTML file. That's the entire onboarding loop.
@@ -251,6 +251,7 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 
 | Version | What changed |
 |---|---|
+| **v3.4** | Trust fixes: real CI checks (registry contract, script syntax, links, privacy guards, fixtures); `schemas` block added to `apps.json`; fixed a syntax error that broke Context Compactor; removed injected third-party challenge scripts from 14 tools; MCP Client Inspector now emits valid Gemini schemas (enums, `required`, arrays of objects); JSON Schema Repair Loop no longer overwrites unrepairable fields, clamps bounds, and only accepts close enum matches; Agent Trace Inspector handles traces without `startedAt`; Adversarial Red-Teamer correctly marked `hybrid`; numeric card IDs on the bench; first six [articles](articles/) |
 | **v3.3** | High-utility consolidation: pruned 9 low-utility/slop tools, registered the 4 observability tools (`trace-inspector`, `session-cost-attributor`, `behavior-drift-monitor`, `decision-log-analyzor`), renamed latency profiler, added API key security guidance, and implemented CI test runner (`tests/check.mjs`) for a standardized 24-tool bench |
 | **v3.0** | Core tool suite expansion covering schema repair, orchestration design, and governance simulators |
 | **v2.0** | Single source of truth architecture (`apps.json`) with explicit limitation notes (`notes`) |

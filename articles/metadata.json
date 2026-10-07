@@ -1,0 +1,186 @@
+{
+  "metadataVersion": 1,
+  "lastUpdated": "2026-10-07",
+  "description": "Index of systems-bench articles. Each entry mirrors the article's front matter and is checked against apps.json by tests/check.mjs.",
+  "generator": {
+    "prompt": "docs/master-prompt-v1.md",
+    "promptVersion": "master-prompt-v1"
+  },
+  "articles": [
+    {
+      "slug": "governance-budget-caps",
+      "title": "Rehearse agent guardrails before they touch production",
+      "file": "governance-budget-caps.md",
+      "type": "tool-deep-dive",
+      "tools": [
+        "governance-budget-caps"
+      ],
+      "primaryTool": "governance-budget-caps",
+      "focus": "operate",
+      "mode": "local",
+      "dimensions": [
+        "SAF",
+        "SCL",
+        "TOL"
+      ],
+      "tags": [
+        "safety",
+        "governance",
+        "cost"
+      ],
+      "audience": "engineer",
+      "summary": "Replay an agent's action log against a budget, per-model caps, forbidden actions, HITL triggers, and output rules to see each verdict.",
+      "date": "2026-10-07",
+      "readingTimeMin": 7,
+      "wordCount": 1173,
+      "promptVersion": "master-prompt-v1",
+      "sourceUrl": "https://github.com/iggym/systems-bench/blob/main/articles/governance-budget-caps.md"
+    },
+    {
+      "slug": "schema-repair-engine",
+      "title": "Repair LLM JSON without silently inventing data",
+      "file": "schema-repair-engine.md",
+      "type": "tool-deep-dive",
+      "tools": [
+        "schema-repair-engine"
+      ],
+      "primaryTool": "schema-repair-engine",
+      "focus": "evaluate",
+      "mode": "local",
+      "dimensions": [
+        "ARC",
+        "EVA",
+        "REL"
+      ],
+      "tags": [
+        "harnesses",
+        "validation"
+      ],
+      "audience": "engineer",
+      "summary": "Validate model output against a JSON Schema subset, auto-repair only the safe cases, and get a log of every change and every refusal.",
+      "date": "2026-10-07",
+      "readingTimeMin": 7,
+      "wordCount": 1152,
+      "promptVersion": "master-prompt-v1",
+      "sourceUrl": "https://github.com/iggym/systems-bench/blob/main/articles/schema-repair-engine.md"
+    },
+    {
+      "slug": "trace-inspector",
+      "title": "Find the span that paces your agent with a trace waterfall",
+      "file": "trace-inspector.md",
+      "type": "tool-deep-dive",
+      "tools": [
+        "trace-inspector"
+      ],
+      "primaryTool": "trace-inspector",
+      "focus": "operate",
+      "mode": "local",
+      "dimensions": [
+        "OBS",
+        "REL"
+      ],
+      "tags": [
+        "observability",
+        "metrics",
+        "diagnostic"
+      ],
+      "audience": "engineer",
+      "summary": "Paste an exported agentTrace and see a nested waterfall, the critical path, and token, cost, and error totals, all computed locally.",
+      "date": "2026-10-07",
+      "readingTimeMin": 7,
+      "wordCount": 1185,
+      "promptVersion": "master-prompt-v1",
+      "sourceUrl": "https://github.com/iggym/systems-bench/blob/main/articles/trace-inspector.md"
+    },
+    {
+      "slug": "debug-an-expensive-agent-session",
+      "title": "Debug an expensive agent session in 10 minutes",
+      "file": "debug-an-expensive-agent-session.md",
+      "type": "workflow-recipe",
+      "tools": [
+        "session-cost-attributor",
+        "trace-inspector",
+        "governance-budget-caps"
+      ],
+      "primaryTool": "session-cost-attributor",
+      "focus": "operate",
+      "mode": "local",
+      "dimensions": [
+        "OBS",
+        "SCL",
+        "SAF"
+      ],
+      "tags": [
+        "cost",
+        "observability",
+        "governance"
+      ],
+      "audience": "engineer",
+      "summary": "A three-tool recipe: attribute spend across sessions, find the costly span in a waterfall, then rehearse a cap that would have stopped it.",
+      "date": "2026-10-07",
+      "readingTimeMin": 8,
+      "wordCount": 1009,
+      "promptVersion": "master-prompt-v1",
+      "sourceUrl": "https://github.com/iggym/systems-bench/blob/main/articles/debug-an-expensive-agent-session.md"
+    },
+    {
+      "slug": "calibration-when-agent-confidence-lies",
+      "title": "Calibration: when agent confidence lies",
+      "file": "calibration-when-agent-confidence-lies.md",
+      "type": "concept-explainer",
+      "tools": [
+        "decision-log-analyzor",
+        "behavior-drift-monitor"
+      ],
+      "primaryTool": "decision-log-analyzor",
+      "focus": "evaluate",
+      "mode": "local",
+      "dimensions": [
+        "OBS",
+        "EVA",
+        "REL"
+      ],
+      "tags": [
+        "observability",
+        "evaluations",
+        "metrics",
+        "diagnostic"
+      ],
+      "audience": "engineer",
+      "summary": "Why an agent's self-reported confidence can't be trusted by default, and how to check it with decision logs and drift monitoring.",
+      "date": "2026-10-07",
+      "readingTimeMin": 8,
+      "wordCount": 1180,
+      "promptVersion": "master-prompt-v1",
+      "sourceUrl": "https://github.com/iggym/systems-bench/blob/main/articles/calibration-when-agent-confidence-lies.md"
+    },
+    {
+      "slug": "agenttrace-schema-guide",
+      "title": "agentTrace v1: one export format for agent traces and cost",
+      "file": "agenttrace-schema-guide.md",
+      "type": "schema-guide",
+      "tools": [
+        "trace-inspector",
+        "session-cost-attributor"
+      ],
+      "primaryTool": "trace-inspector",
+      "focus": "operate",
+      "mode": "local",
+      "dimensions": [
+        "OBS",
+        "ARC"
+      ],
+      "tags": [
+        "observability",
+        "metrics"
+      ],
+      "audience": "engineer",
+      "summary": "Field-by-field reference for the agentTrace v1 schema, a minimal valid example, export guidance, and the bench tools that consume it.",
+      "date": "2026-10-07",
+      "readingTimeMin": 6,
+      "wordCount": 937,
+      "promptVersion": "master-prompt-v1",
+      "sourceUrl": "https://github.com/iggym/systems-bench/blob/main/articles/agenttrace-schema-guide.md"
+    }
+  ]
+}

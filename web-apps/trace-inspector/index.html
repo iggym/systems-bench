@@ -126,12 +126,16 @@ function assignTiming(spans) {
     // untimed: cumulative in DFS order
     const children = buildChildren(spans);
     let cursor = 0;
-    (function dfs(id) {
+    // a parent starts where its first child starts; siblings run back-to-back
+    const dfs = (id) => {
       const s = byId[id];
       s.startMs = cursor;
-      cursor += (s.durationMs || 1);
-      (children.get(id) || []).forEach(c => dfs(c.id));
-    })(null);
+      const kids = children.get(id) || [];
+      if (!kids.length) cursor += (s.durationMs || 1);
+      kids.forEach(c => dfs(c.id));
+      cursor = Math.max(cursor, s.startMs + (s.durationMs || 1));
+    };
+    (children.get(null) || []).forEach(root => dfs(root.id));
   }
 }
 

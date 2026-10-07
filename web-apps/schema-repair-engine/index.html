@@ -97,6 +97,7 @@ const TYPES = { string:['string'], integer:['integer'], number:['number','intege
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
 function collect(node, schema, path, out) {
+  const start = out.length;
   if (schema.type !== undefined) {
     const g = TYPES[schema.type] || [schema.type];
     if (!g.includes(typeOf(node))) out.push({ path, code: 'TYPE', expected: schema.type, actual: typeOf(node) });
@@ -123,6 +124,7 @@ function collect(node, schema, path, out) {
     }
   }
   if (typeOf(node) === 'array' && schema.items) node.forEach((it, i) => collect(it, schema.items, `${path}[${i}]`, out));
+  for (let i = start; i < out.length; i++) if (!out[i].schema && out[i].path === path) out[i].schema = schema;
 }
 
 // Levenshtein for enum nearest-match
@@ -151,6 +153,7 @@ function setPath(obj, path, fn) {
 }
 
 function coerce(value, type) {
+  if (value === null || value === undefined || typeof value === 'object') return null;
   if (type === 'integer' || type === 'number') {
     const n = Number(String(value).replace(/,/g, ''));
     if (isNaN(n)) return null;
@@ -187,11 +190,15 @@ function runRepairLoop() {
       let repair = null;
       if (v.code === 'TYPE') {
         const fixed = coerce(value, v.expected);
-        if (fixed !== null && typeOf(fixed) === v.expected) repair = { rule: 'coerce ' + v.actual + ' → ' + v.expected, to: fixed };
+        if (fixed !== null && TYPES[v.expected] && TYPES[v.expected].includes(typeOf(fixed))) repair = { rule: 'coerce ' + v.actual + ' → ' + v.expected, to: fixed };
+        else repair = { rule: 'cannot coerce ' + v.actual + ' → ' + v.expected + ' — UNRESOLVED', unresolved: true };
       } else if (v.code === 'ENUM') {
         const nm = nearest(value, v.expected);
         const def = v.schema && v.schema.default;
-        repair = nm.e !== null ? { rule: `enum nearest-match → "${nm.e}"`, to: nm.e } : (def !== undefined ? { rule: `enum default → "${def}"`, to: def } : null);
+        const close = nm.e !== null && nm.d <= Math.max(1, Math.floor(String(nm.e).length / 3));
+        repair = close ? { rule: `enum nearest-match → "${nm.e}" (edit distance ${nm.d})`, to: nm.e }
+          : def !== undefined && v.schema.enum.includes(def) ? { rule: `enum default → "${def}" (no close match)`, to: def }
+          : { rule: 'no close enum match and no default — UNRESOLVED', unresolved: true };
       } else if (v.code === 'MISSING') {
         const sub = v.schema;
         if (sub && sub.default !== undefined) repair = { rule: 'insert required from default', to: sub.default, insert: true };
@@ -201,16 +208,19 @@ function runRepairLoop() {
       } else if (v.code === 'MIN') { repair = { rule: 'clamp to minimum', to: v.schema ? (typeof v.schema.minimum === 'number' ? v.schema.minimum : value) : value }; }
       else if (v.code === 'MAX') { repair = { rule: 'clamp to maximum', to: v.schema ? (typeof v.schema.maximum === 'number' ? v.schema.maximum : value) : value }; }
       else if (v.code === 'MIN_LENGTH' || v.code === 'MAX_LENGTH' || v.code === 'PATTERN' || v.code === 'CONST' || v.code === 'MIN_ITEMS' || v.code === 'MAX_ITEMS') {
-        repair = { rule: 'no safe repair — unresolved (' + v.code + ')', unresolved: true };
+        repair = { rule: 'no safe repair — UNRESOLVED (' + v.code + ')', unresolved: true };
       }
-      if (repair) {
+      if (repair && repair.unresolved && !repair.insert) {
+        // no safe repair: record it, leave the value untouched
+        if (!log.some(l => l.path === v.path && l.code === v.code)) log.push({ pass: pass + 1, path: v.path, code: v.code, rule: repair.rule, before: JSON.stringify(value), after: JSON.stringify(value), unresolved: true });
+      } else if (repair) {
         const before = v.path === '$' ? JSON.stringify(current) : JSON.stringify(value);
         setPath(current, v.path, (obj, key) => {
           if (repair.insert) obj[key] = repair.to;
           else if (repair.remove) delete obj[key];
           else obj[key] = repair.to;
         });
-        log.push({ pass: pass + 1, path: v.path, code: v.code, rule: repair.rule, before, after: v.path === '$' ? JSON.stringify(current) : JSON.stringify((() => { try { const parts = v.path.replace(/^\$\.?/,'').split(/\.|\[(\d+)\]/).filter(Boolean); let c = current; for (const p of parts) { const k = /^\d+$/.test(p)?Number(p):p; c = c?.[k]; } return c; } catch(e){ return '?'; } })()) });
+        log.push({ pass: pass + 1, path: v.path, code: v.code, rule: repair.rule, unresolved: !!repair.unresolved, before, after: v.path === '$' ? JSON.stringify(current) : JSON.stringify((() => { try { const parts = v.path.replace(/^\$\.?/,'').split(/\.|\[(\d+)\]/).filter(Boolean); let c = current; for (const p of parts) { const k = /^\d+$/.test(p)?Number(p):p; c = c?.[k]; } return c; } catch(e){ return '?'; } })()) });
         totalRepairs++;
         changed = true;
       }
@@ -220,7 +230,7 @@ function runRepairLoop() {
 
   const residual = [];
   collect(current, schema, '$', residual);
-  const unresolved = log.filter(l => l.rule.includes('UNRESOLVED'));
+  const unresolved = log.filter(l => l.unresolved);
 
   badge.textContent = converged ? 'CONVERGED' : 'MAX PASSES / UNRESOLVED';
   badge.className = converged ? 'badge b-ok' : (unresolved.length ? 'badge b-warn' : 'badge b-err');
@@ -247,5 +257,5 @@ async function copyOut() {
   else { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); document.getElementById('statusBadge').textContent = 'COPIED'; }
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a246d56afba64758',t:'MTc4NTYwODE4Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

@@ -450,13 +450,13 @@
     }
 
     pegboard.innerHTML = filtered.map((a, i) => {
-      const id = (a.id || String(i+1)).toString().padStart(3, '0');
+      const id = String(a._num).padStart(3, '0');
       const tags = (a.tags || []).map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('');
       const date = a.dateAdded ? formatDate(a.dateAdded) : '';
       return (
         '<a class="card" href="' + escapeAttr(a.url) + '" target="_blank" rel="noopener">' +
           '<div class="card-top">' +
-            '<span class="card-id mono">#' + id + '</span>' +
+            '<span class="card-id mono" title="' + escapeAttr(a.id) + '">#' + id + '</span>' +
             '<span class="status-dot" data-status="' + escapeAttr(a.status || 'live') + '"></span>' +
           '</div>' +
           '<h3>' + escapeHtml(a.name) + '</h3>' +
@@ -505,7 +505,9 @@
   }
 
   function init(data){
-    apps = (data.apps || []).slice().sort((a,b) => (b.dateAdded||'').localeCompare(a.dateAdded||''));
+    // stable registry number (position in apps.json), independent of sort order and filters
+    apps = (data.apps || []).map((a, i) => Object.assign({ _num: i + 1 }, a))
+      .sort((a,b) => (b.dateAdded||'').localeCompare(a.dateAdded||''));
 
     populateSelects(data);
 

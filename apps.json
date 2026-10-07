@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-01",
+  "lastUpdated": "2026-10-06",
   "purpose": "A workbench for evaluating, designing, and describing agentic AI systems \u2014 tools, harnesses, loops, workflows, and orchestration frameworks. Single-purpose, client-side, zero accounts. Statuses, caveats, and estimates are stated honestly: planned tools are not counted as shipped, duplicates are flagged, and no tool claims capabilities it does not have.",
   "dimensions": [
     {
@@ -57,6 +57,80 @@
     "operate": "Operate: cost, capacity, latency, and proxy infrastructure",
     "describe": "Describe: registries and documentation surfaces"
   },
+  "schemas": {
+    "agentTrace": {
+      "version": 1,
+      "description": "One agent session as a tree of spans linked by parent id. Totals are plain sums over all spans, so do not put rolled-up child costs on parent spans.",
+      "root": {
+        "schemaVersion": "number (1)",
+        "session": "string",
+        "workflow": "string (optional)",
+        "spans": "span[] (required, non-empty)"
+      },
+      "span": {
+        "id": "string (unique; auto-assigned if missing)",
+        "parent": "string | null (null or unknown parent = root)",
+        "type": "llm | tool | loop | eval | handoff | plan | act (anything else is shown as 'other')",
+        "name": "string",
+        "startedAt": "ISO-8601 or epoch ms (optional; if no span has it, spans are laid out sequentially in tree order)",
+        "durationMs": "number",
+        "model": "string | null",
+        "tokensIn": "number",
+        "tokensOut": "number",
+        "costUsd": "number",
+        "status": "ok | error | timeout (default ok)",
+        "error": "string (optional)",
+        "input": "string (optional)",
+        "output": "string (optional)",
+        "attrs": "object (optional, free-form)"
+      },
+      "consumers": [
+        "trace-inspector",
+        "session-cost-attributor"
+      ],
+      "notes": "session-cost-attributor also accepts {sessions:[{session, workflow, spans}]} or a bare spans array."
+    },
+    "decisionLog": {
+      "version": 1,
+      "description": "Ordered agent decisions with stated confidence and the observed outcome, for calibration analysis.",
+      "root": {
+        "schemaVersion": "number (1)",
+        "session": "string",
+        "workflow": "string (optional)",
+        "decisions": "decision[] (required, non-empty; a bare array is also accepted)"
+      },
+      "decision": {
+        "step": "number",
+        "actor": "string (e.g. agent | tool | human)",
+        "decision": "string",
+        "optionsConsidered": "string[] (optional)",
+        "rationale": "string (optional)",
+        "confidence": "number 0..1",
+        "outcome": "success | failure",
+        "latencyMs": "number (optional)",
+        "costUsd": "number (optional)",
+        "error": "string (optional)"
+      },
+      "consumers": [
+        "decision-log-analyzor"
+      ]
+    },
+    "behaviorSnapshot": {
+      "version": 1,
+      "description": "Daily aggregate metrics for an agent, used to compare a baseline window against a recent window.",
+      "root": {
+        "schemaVersion": "number (1)",
+        "series": "point[] (required, >= 2 points)"
+      },
+      "point": {
+        "date": "YYYY-MM-DD",
+        "metrics": "object of metricName -> number; keys should be consistent across points"
+      },
+      "consumers": [
+        "behavior-drift-monitor"
+      ]
+    }
+  },
   "apps": [
     {
       "id": "adversarial-red-teamer",
@@ -68,15 +142,15 @@
         "security"
       ],
       "status": "live",
-      "mode": "local",
+      "mode": "hybrid",
       "focus": "evaluate",
       "dimensions": [
         "safety",
         "evaluation"
       ],
-      "notes": "Static review is labeled heuristic text analysis \u2014 not a vulnerability scan. Live probe uses substring detection and needs a Gemini key; results are indicative, not a security guarantee.",
+      "notes": "Static review is labeled heuristic text analysis \u2014 not a vulnerability scan. Optional live probe calls Gemini with your key and uses substring detection; results are indicative, not a security guarantee.",
       "dateAdded": "2026-07-31",
-      "updated": "2026-08-01"
+      "updated": "2026-10-06"
     },
     {
       "id": "ai-infra-router",
@@ -137,7 +211,8 @@
         "observability"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Retention is lexical coverage only \u2014 a floor, not semantic fidelity. The LLM summary row needs a Gemini key and is subject to free-tier rate limits."
+      "notes": "Retention is lexical coverage only \u2014 a floor, not semantic fidelity. The LLM summary row needs a Gemini key and is subject to free-tier rate limits.",
+      "updated": "2026-07-31"
     },
     {
       "id": "context-compactor",
@@ -157,7 +232,7 @@
       ],
       "notes": "Lossless gzip ratio estimates byte savings; token budget counts use lexical word approximation (~1.33 tokens/word), not model-specific BPE tokenizers.",
       "dateAdded": "2026-07-31",
-      "updated": "2026-08-01"
+      "updated": "2026-10-06"
     },
     {
       "id": "context-firewall",
@@ -280,7 +355,8 @@
         "reliability"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Live mode is Gemini-only with a fixed concurrency of 4; no retries or cost tracking. Local lint is dataset integrity only."
+      "notes": "Live mode is Gemini-only with a fixed concurrency of 4; no retries or cost tracking. Local lint is dataset integrity only.",
+      "updated": "2026-07-31"
     },
     {
       "id": "governance-budget-caps",
@@ -341,13 +417,14 @@
         "evaluation"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Local structural checks (JSON validity, keywords, code fences, repeated sentences) are shallow; a real rubric grade requires the live judge and a Gemini key."
+      "notes": "Local structural checks (JSON validity, keywords, code fences, repeated sentences) are shallow; a real rubric grade requires the live judge and a Gemini key.",
+      "updated": "2026-07-31"
     },
     {
       "id": "mcp-schema-converter",
       "name": "MCP Client Inspector",
       "url": "web-apps/mcp-schema-converter/index.html",
-      "description": "Recursively compiles MCP-style tool definitions into OpenAI-style function schemas or Gemini FunctionDeclarations as you type, handling nested objects/arrays, enums, defaults, and required flags.",
+      "description": "Recursively compiles MCP-style tool definitions into OpenAI-style function schemas or Gemini FunctionDeclarations as you type, handling nested objects, arrays of objects, enums, defaults, and required flags.",
       "tags": [
         "context-engineering",
         "mcp"
@@ -359,8 +436,9 @@
         "architecture",
         "tooling"
       ],
-      "notes": "The Gemini branch drops enums and mishandles array-of-object; input is a custom JSON shape, not raw MCP tool definitions.",
-      "dateAdded": "2026-07-31"
+      "notes": "Input is a custom MCP-style JSON shape ({name, description, args|parameters} with per-field required flags), not raw MCP inputSchema. Gemini output keeps enums (as STRING format enum) but drops defaults, which Gemini schemas don't support. Compilation is structural only \u2014 no $ref, oneOf, or anyOf.",
+      "dateAdded": "2026-07-31",
+      "updated": "2026-10-06"
     },
     {
       "id": "multi-llm-arena",
@@ -380,7 +458,8 @@
         "reliability"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Token counts are heuristic (words \u00d7 1.33); simulation mode uses placeholder latencies, clearly labeled."
+      "notes": "Token counts are heuristic (words \u00d7 1.33); simulation mode uses placeholder latencies, clearly labeled.",
+      "updated": "2026-07-31"
     },
     {
       "id": "needle-haystack-benchmarker",
@@ -399,7 +478,8 @@
         "observability"
       ],
       "notes": "Filler corpus is 20 sentences repeated; answer matching is substring-based.",
-      "dateAdded": "2026-07-31"
+      "dateAdded": "2026-07-31",
+      "updated": "2026-07-31"
     },
     {
       "id": "prompt-mutation-optimizer",
@@ -418,7 +498,8 @@
         "architecture"
       ],
       "notes": "The local score is a weighted regex checklist \u2014 an exploration aid, not a rigorous metric.",
-      "dateAdded": "2026-07-31"
+      "dateAdded": "2026-07-31",
+      "updated": "2026-07-31"
     },
     {
       "id": "react-loop-visualizer",
@@ -437,13 +518,14 @@
         "orchestration"
       ],
       "dateAdded": "2026-07-31",
-      "notes": "Parses only `Label: content` lines; no JSON tool-call formatting. For debugging traces, not production telemetry."
+      "notes": "Parses only `Label: content` lines; no JSON tool-call formatting. For debugging traces, not production telemetry.",
+      "updated": "2026-07-31"
     },
     {
       "id": "schema-repair-engine",
       "name": "JSON Schema Repair Loop",
       "url": "web-apps/schema-repair-engine/index.html",
-      "description": "Validates a payload against a JSON Schema subset, classifies every violation, applies targeted auto-repairs (type coercion, enum nearest-match, default insertion, extra-property stripping), then re-validates up to N passes with a complete repair log. Unresolvable violations stop the loop rather than being forced.",
+      "description": "Validates a payload against a JSON Schema subset, classifies every violation, applies targeted auto-repairs (type coercion, close enum match or schema default, default insertion, min/max clamping, extra-property stripping), then re-validates up to N passes with a complete repair log. Violations without a safe repair are left untouched and reported as unresolved.",
       "tags": [
         "harnesses",
         "validation"
@@ -456,9 +538,9 @@
         "evaluation",
         "reliability"
       ],
-      "notes": "Repairs are conservative; violations without a safe repair are reported as unresolved.",
+      "notes": "Repairs are conservative: enum nearest-match only within a small edit distance, otherwise the schema default, otherwise unresolved. Pattern, length, and const violations are never auto-fixed. Same JSON Schema subset as the Contract Validator (no $ref/oneOf/anyOf/allOf).",
       "dateAdded": "2026-07-31",
-      "updated": "2026-08-01"
+      "updated": "2026-10-06"
     },
     {
       "id": "scratchpad-state-manager",
@@ -479,7 +561,8 @@
         "reliability"
       ],
       "notes": "The hash is keyless \u2014 it detects accidental corruption, not malicious tampering.",
-      "dateAdded": "2026-07-31"
+      "dateAdded": "2026-07-31",
+      "updated": "2026-07-31"
     },
     {
       "id": "session-cost-attributor",
@@ -506,7 +589,7 @@
       "id": "trace-inspector",
       "name": "Agent Trace Inspector",
       "url": "web-apps/trace-inspector/index.html",
-      "description": "Renders nested waterfall charts from agentTrace v1 JSON logs, calculates critical paths, displays span depth (plan, tool, eval, hitl), and aggregates tokens, duration, and cost.",
+      "description": "Renders nested waterfall charts from agentTrace v1 JSON logs, calculates the critical path (longest root-to-leaf duration chain), shows span types (plan, llm, tool, eval, loop, handoff, act), and aggregates tokens, duration, and cost.",
       "tags": [
         "observability",
         "metrics",
@@ -519,9 +602,9 @@
         "observability",
         "reliability"
       ],
-      "notes": "Runs 100% client-side. Validates and displays agentTrace v1 schema spans locally without transmitting trace telemetry to any third-party server.",
+      "notes": "Runs 100% client-side on exported agentTrace JSON; no live ingestion. Totals are plain sums over all spans, so parent spans carrying rolled-up child costs are double-counted. Unknown span types render as 'other'.",
       "dateAdded": "2026-08-01",
-      "updated": "2026-08-01"
+      "updated": "2026-10-06"
     },
     {
       "id": "workflow-orchestration-designer",

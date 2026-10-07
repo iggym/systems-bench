@@ -128,7 +128,7 @@ async function runStrategies() {
   const rawChars = raw.length;
   const chat = isChatJSON(raw);
   document.getElementById('rawStat').textContent =
-    `input: ${rawChars.toLocaleString()} chars · ~${rawTok.toLocaleString()} tokens (${chat ? 'parsed as ' + JSON.parse(raw).length + '-turn chat' : 'text')}`;
+    `input: ${rawChars.toLocaleString()} chars · ~${rawTok.toLocaleString()} tokens (${chat ? 'parsed as ' + JSON.parse(raw).length + '-turn chat' : 'text'})`;
 
   const rows = [];
 
