@@ -300,6 +300,26 @@
       "updated": "2026-10-07"
     },
     {
+      "id": "eval-run-diff",
+      "name": "Eval Run Diff",
+      "url": "web-apps/eval-run-diff/index.html",
+      "description": "Compare two evaluation runs (golden-set or rubric scores) and surface regressions. Input two result sets; outputs per-sample deltas, aggregate metrics, and a ranked list of biggest changes.",
+      "tags": [
+        "evaluations",
+        "testing",
+        "metrics"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "evaluate",
+      "dimensions": [
+        "evaluation"
+      ],
+      "notes": "Score comparison uses 5% threshold to classify as regression/improvement. Pass/fail changes always count. Does not account for statistical significance or dataset size. Use to spot obvious regressions before submitting a prompt change to production.",
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
       "id": "fewshot-example-builder",
       "name": "Few-Shot Canonical Example Builder",
       "url": "web-apps/fewshot-example-builder/index.html",
@@ -485,6 +505,27 @@
       "updated": "2026-07-31"
     },
     {
+      "id": "otel-to-agentTrace-converter",
+      "name": "OpenTelemetry GenAI → agentTrace Converter",
+      "url": "web-apps/otel-to-agentTrace-converter/index.html",
+      "description": "Transform OpenTelemetry GenAI semantic convention spans into the bench's agentTrace v1 schema. Input OTel JSON; outputs agentTrace spans for use with Agent Trace Inspector. Supports LangChain, LiteLLM, and custom exporters.",
+      "tags": [
+        "observability",
+        "schemas",
+        "mcp"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "observability",
+        "architecture"
+      ],
+      "notes": "Maps OTel GenAI semantic conventions to agentTrace v1 using heuristics for type detection (llm/tool/eval/loop/handoff/plan). Requires input spans with gen_ai.usage.* attributes. Unmapped attributes become attrs{}. Use this to feed production traces into the bench's observability tools.",
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07"
+    },
+    {
       "id": "prompt-mutation-optimizer",
       "name": "System Prompt Mutation Optimizer",
       "url": "web-apps/prompt-mutation-optimizer/index.html",
@@ -523,6 +564,27 @@
       "dateAdded": "2026-07-31",
       "notes": "Parses only `Label: content` lines; no JSON tool-call formatting. For debugging traces, not production telemetry.",
       "updated": "2026-07-31"
+    },
+    {
+      "id": "retry-backoff-simulator",
+      "name": "Retry/Backoff & Rate-Limit Simulator",
+      "url": "web-apps/retry-backoff-simulator/index.html",
+      "description": "Model retry storms, exponential backoff with jitter, and 429 rate-limit handling. Input a request log and policy; outputs retry timeline, cost impact, and success rate.",
+      "tags": [
+        "testing",
+        "performance",
+        "diagnostic"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "tooling",
+        "reliability"
+      ],
+      "notes": "Retry simulation heuristic: assumes 70% success on first retry, +15% per additional retry. Real systems vary by provider, load, and context. Does not model token-level jitter or adaptive backoff strategies. Use to reason about retry costs and retry storms, then wire into a real gateway.",
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07"
     },
     {
       "id": "schema-repair-engine",
@@ -588,6 +650,27 @@
       "notes": "Calculates spend attribution locally from agentTrace JSON logs. Does not connect to billing APIs or cloud provider cost explorers.",
       "dateAdded": "2026-08-01",
       "updated": "2026-08-01"
+    },
+    {
+      "id": "tool-permission-designer",
+      "name": "Tool Permission & Allowlist Designer",
+      "url": "web-apps/tool-permission-designer/index.html",
+      "description": "Define per-tool allowed actions and test an agent trace against them. Specify which tools can call which resources (e.g., \"payment-processor can only call stripe.charges.create\"). Test violations against a trace.",
+      "tags": [
+        "safety",
+        "governance",
+        "testing"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "safety",
+        "tooling"
+      ],
+      "notes": "Access control is modeled as static allowlists with regex patterns for resources. This is a policy designer, not a runtime enforcer — wire the same rules into your gateway or orchestration layer for actual enforcement. Patterns are case-insensitive regex.",
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07"
     },
     {
       "id": "trace-inspector",
