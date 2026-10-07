@@ -124,7 +124,6 @@ function collect(node, schema, path, out) {
     }
   }
   if (typeOf(node) === 'array' && schema.items) node.forEach((it, i) => collect(it, schema.items, `${path}[${i}]`, out));
-  for (let i = start; i < out.length; i++) if (!out[i].schema && out[i].path === path) out[i].schema = schema;
 }
 
 // Levenshtein for enum nearest-match

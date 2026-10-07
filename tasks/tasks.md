@@ -26,7 +26,7 @@
 - [x] 🔴 **M — Fix MCP Client Inspector's Gemini branch.** Its own `notes` say it "drops enums and
   mishandles array-of-object." Fix the converter, add fixture tests, then update `notes`.
   *Done when:* enum and `array<object>` fixtures produce valid Gemini `FunctionDeclarations`.
-  ✅ *Done 2026-10-07:* Gemini output now uses a name→schema `properties` map with `required`, keeps enums (`format: enum`), and handles `array<object>`; covered by `tests/fixtures/mcp-schema-converter.mjs`.
+  ✅ *Done 2026-10-07:* Gemini output now uses a name→schema `properties` map with `required`, keeps enums, and handles `array<object>`; covered by the MCP assertions in `tests/check.mjs` §4.
 
 - [ ] 🟠 **S — Rename the `decision-log-analyzor` slug to `decision-log-analyzer`.** Move the folder,
   update `id`/`url`, and leave a small redirect `index.html` at the old path so existing links keep working.
@@ -135,7 +135,7 @@
 
 ## 5. Content — articles & docs
 
-- [ ] 🟠 **L — Launch an articles section.** *(In progress: 6 articles in `articles/`, indexed in `articles/metadata.json`; rendering them on the site and linking from cards is still open.)* Generate one deep-dive per tool with
+- [ ] 🟠 **L — Launch an articles section.** *(In progress: 8 articles in `articles/`, indexed in `articles/metadata.json`; rendering them on the site and linking from cards is still open.)* Generate one deep-dive per tool with
   `docs/master-prompt-v1.md`, store them in `articles/<tool-id>.md`, render them as static pages, and
   add a "Read the guide" link on each card. Add an optional `article` field to `apps.json`.
 - [ ] 🟠 **M — Write the cross-cutting articles** *(In progress: "Debug an expensive agent session" and "Calibration: when agent confidence lies" are published, plus an `agentTrace` schema guide.)* from the backlog in the master prompt (debugging an
@@ -188,9 +188,9 @@ These weren't in the original audit. The new checks or the article walkthroughs 
 - [x] 🔴 **JSON Schema Repair Loop broke its own "never force a value" promise.** "No safe repair"
   cases (pattern/length/const) overwrote the field with `undefined`. Min/max clamps were no-ops.
   Enum nearest-match always picked *some* value, however distant. A missing field without a default
-  got coerced to the string `"null"`. All fixed and covered by `tests/fixtures/schema-repair-engine.mjs`.
+  got coerced to the string `"null"`. All fixed; the engine is now a pure `repairLoop()` covered by the repair assertions in `tests/check.mjs` §4.
 - [x] 🔴 **Agent Trace Inspector crashed on traces without `startedAt`**, which the schema allows.
-  Untimed traces are now laid out in tree order. Covered by `tests/fixtures/trace-inspector.mjs`.
+  Untimed traces are now laid out in tree order. Covered by the trace-inspector assertions in `tests/check.mjs` §4.
 - [x] 🟠 **Registry text corrected** to match the code: Trace Inspector span types (no `hitl` type),
   the double-counting caveat for rolled-up parent costs, and the Repair Loop's new behavior.
 

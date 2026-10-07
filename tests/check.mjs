@@ -183,6 +183,36 @@ if (cap) {
   check(m.bytesInFlight === 625000, `capacity: in-flight bytes (BDP) wrong (got ${m.bytesInFlight})`);
 }
 
+{
+  // trace-inspector: timing + critical path (no pure block; evaluate the function range directly)
+  const html = fs.readFileSync(path.join(rootDir, 'web-apps/trace-inspector/index.html'), 'utf8');
+  const a = html.indexOf('function assignTiming'), b = html.indexOf('function renderStats');
+  if (check(a > 0 && b > a, 'trace: assignTiming…renderStats range not found')) {
+    const ctx = {};
+    vm.createContext(ctx);
+    vm.runInContext(html.slice(a, b) + '; this.assignTiming = assignTiming; this.criticalPath = criticalPath;', ctx);
+    // spans without startedAt are valid agentTrace v1 and must not crash
+    const untimed = [
+      { id: 'r', parent: null, durationMs: 1000 },
+      { id: 'a', parent: 'r', durationMs: 300 },
+      { id: 'b', parent: 'r', durationMs: 500 },
+      { id: 'c', parent: 'b', durationMs: 200 }
+    ];
+    let err = null;
+    try { ctx.assignTiming(untimed); } catch (e) { err = e.message; }
+    check(err === null, `trace: untimed trace crashed (${err})`);
+    const at = Object.fromEntries(untimed.map(s => [s.id, s.startMs]));
+    check(at.r === 0 && at.a === 0 && at.b === 300 && at.c === 300, `trace: untimed layout wrong (${JSON.stringify(at)})`);
+    check(JSON.stringify([...ctx.criticalPath(untimed)]) === '["r","b","c"]', 'trace: critical path must follow the longest duration chain');
+    const timed = [
+      { id: 'r', parent: null, startedAt: '2026-10-01T09:00:00.000Z', durationMs: 900 },
+      { id: 'a', parent: 'r', startedAt: '2026-10-01T09:00:00.250Z', durationMs: 100 }
+    ];
+    ctx.assignTiming(timed);
+    check(timed[0].startMs === 0 && timed[1].startMs === 250, 'trace: timed offsets must be relative to the earliest span');
+  }
+}
+
 // ---------- 5. Articles ----------
 const articlesDir = path.join(rootDir, 'articles');
 const metaPath = path.join(articlesDir, 'metadata.json');

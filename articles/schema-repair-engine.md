@@ -48,14 +48,14 @@ Validation covers `type`, `required`, `enum`, `const`, `pattern`, `minLength`/`m
 
 | Violation | Repair |
 |---|---|
-| `TYPE` | Coerce string ↔ number/integer/boolean when the value parses cleanly; otherwise unresolved |
+| `TYPE` | Coerce a string to number/integer/boolean when it parses cleanly, or a number/boolean to string; otherwise unresolved |
 | `ENUM` | Case-insensitive nearest match if within a small edit distance (≤ ⌊length/3⌋, minimum 1); else the schema `default`; else unresolved |
-| `MISSING` | Insert the property's `default`; if there is none, insert `null` and mark it unresolved |
+| `MISSING` | Insert the property's `default`; if there is none, leave it out and report it as unresolved |
 | `EXTRA` | Strip the property (only when `additionalProperties: false`) |
 | `MIN` / `MAX` | Clamp to the bound |
 | `PATTERN`, `MIN_LENGTH`, `MAX_LENGTH`, `CONST` | Never repaired; the value is left untouched and reported as unresolved |
 
-The loop runs until the payload validates (**CONVERGED**), no repair makes progress, or the pass limit is reached (**MAX PASSES / UNRESOLVED**).
+The loop runs until the payload validates (**CONVERGED**), only unresolved violations remain (**STOPPED — UNRESOLVED**), or the pass limit is reached (**MAX PASSES**). The input payload is never mutated; repairs apply to a copy.
 
 ## Walkthrough: try it in 60 seconds
 
@@ -90,16 +90,16 @@ The loop runs until the payload validates (**CONVERGED**), no repair makes progr
 
 4. Click **Run Repair Loop** with max passes = 3.
 
-You should see the badge **MAX PASSES / UNRESOLVED** with 5 repairs and 1 residual violation, and this log:
+You should see the badge **STOPPED — UNRESOLVED** with 3 passes, 5 repairs, and 1 residual violation, and this log:
 
 | Pass | Path | Rule | Before → After |
 |---|---|---|---|
-| 1 | `$.priority` | enum nearest-match → "high" (edit distance 1) | "Hgh" → "high" |
-| 1 | `$.assignee` | no safe repair — UNRESOLVED (PATTERN) | "Jane Doe" → "Jane Doe" |
+| 1 | `$.priority` | enum nearest-match → "high" (distance 1) | "Hgh" → "high" |
+| 1 | `$.assignee` | no safe repair (PATTERN, UNRESOLVED) | "Jane Doe" → (unchanged) |
 | 1 | `$.due_in_days` | coerce string → integer | "45" → 45 |
 | 1 | `$.notify` | coerce string → boolean | "true" → true |
-| 1 | `$.reasoning` | strip additional property | removed |
-| 2 | `$.due_in_days` | clamp to maximum | 45 → 30 |
+| 1 | `$.reasoning` | strip additional property | "user sounded upset" → (removed) |
+| 2 | `$.due_in_days` | clamp to maximum 30 | 45 → 30 |
 
 The repaired payload is `{"priority":"high","assignee":"Jane Doe","due_in_days":30,"notify":true}`. The assignee is deliberately left alone.
 
@@ -108,7 +108,7 @@ The pass-2 clamp shows why the loop exists: coercion had to happen before the ra
 ## Reading the results
 
 - **CONVERGED:** every violation had a safe fix. Pass the repaired payload on, and log the repair count as a quality signal for the prompt.
-- **MAX PASSES / UNRESOLVED:** at least one field needs real information. Re-ask the model with the specific violation ("assignee must match `first.last`"), or send it to a human. Don't forward the payload as is.
+- **STOPPED — UNRESOLVED** (or **MAX PASSES**): at least one field needs real information. Re-ask the model with the specific violation ("assignee must match `first.last`"), or send it to a human. Don't forward the payload as is.
 - **Watch for value-changing repairs.** In the walkthrough, "45 days" became 30, which is a meaning change, not a formatting fix. Decide per field whether clamping is acceptable or should be rejected.
 - **A high repair count across many runs** means the prompt or the output format is wrong. Fix it upstream with few-shot examples or tighter instructions.
 
@@ -119,7 +119,7 @@ From the tool's registry notes: repairs are **conservative**. Enum nearest-match
 Also visible in the source:
 
 - Edit distance is Levenshtein on lowercased strings, so it catches typos and case, not synonyms ("urgent" will not map to "high").
-- `MISSING` without a default inserts `null` so the structure is complete. That `null` is marked unresolved and should be treated as missing.
+- A required field with no `default` is never invented. It stays missing and is reported, so the payload still fails validation until real data arrives.
 - Clamping changes meaning. For fields like money or dates, rejecting is often safer than clamping.
 - For production-grade validation with the full spec, use a complete JSON Schema validator and keep this repair logic as a thin, logged layer on top.
 
