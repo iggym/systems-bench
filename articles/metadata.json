@@ -1,0 +1,87 @@
+{
+  "articles": [
+    {
+      "slug": "trace-inspector",
+      "file": "trace-inspector.md",
+      "tool_id": "trace-inspector",
+      "type": "tool-deep-dive",
+      "title": "Trace waterfall timelines for distributed agent work",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["observability", "metrics", "diagnostic"],
+      "dimensions": ["OBS", "REL"],
+      "focus": "operate",
+      "reading_time_min": 12
+    },
+    {
+      "slug": "decision-log-analyzer",
+      "file": "decision-log-analyzer.md",
+      "tool_id": "decision-log-analyzor",
+      "type": "tool-deep-dive",
+      "title": "Spot where your agent's confidence is misaligned with reality",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["observability", "evaluations", "metrics"],
+      "dimensions": ["OBS", "EVA"],
+      "focus": "evaluate",
+      "reading_time_min": 11
+    },
+    {
+      "slug": "session-cost-attributor",
+      "file": "session-cost-attributor.md",
+      "tool_id": "session-cost-attributor",
+      "type": "tool-deep-dive",
+      "title": "Break down agent spend by session, model, and step type",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["cost", "observability", "metrics"],
+      "dimensions": ["OBS", "SCL"],
+      "focus": "operate",
+      "reading_time_min": 11
+    },
+    {
+      "slug": "governance-budget-caps",
+      "file": "governance-budget-caps.md",
+      "tool_id": "governance-budget-caps",
+      "type": "tool-deep-dive",
+      "title": "Enforce policy guardrails on agent spend, actions, and outputs",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["safety", "governance", "cost", "hitl"],
+      "dimensions": ["SAF", "SCL", "TOL"],
+      "focus": "operate",
+      "reading_time_min": 13
+    },
+    {
+      "slug": "debug-expensive-session",
+      "file": "debug-expensive-session.md",
+      "tool_id": "workflow-recipe",
+      "type": "workflow-recipe",
+      "title": "Debug an expensive agent session in 10 minutes",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["cost", "observability", "diagnostic", "safety"],
+      "dimensions": ["OBS", "SAF"],
+      "focus": "operate",
+      "reading_time_min": 14,
+      "tools_chained": ["trace-inspector", "session-cost-attributor", "governance-budget-caps"]
+    },
+    {
+      "slug": "agentTrace-schema",
+      "file": "agentTrace-schema.md",
+      "tool_id": "schema-guide",
+      "type": "schema-guide",
+      "title": "agentTrace v1 — schema reference for agent session traces",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["architecture", "observability", "schemas"],
+      "dimensions": ["ARC", "OBS"],
+      "focus": "design",
+      "reading_time_min": 10,
+      "schema": "agentTrace",
+      "consumed_by": ["trace-inspector", "session-cost-attributor"]
+    }
+  ],
+  "generated": "2026-10-07",
+  "prompt_version": "master-prompt-v1"
+}
