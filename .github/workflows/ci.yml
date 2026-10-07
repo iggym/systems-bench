@@ -1,10 +1,14 @@
 name: CI checks
 
+# Disabled 2026-10-07: jobs never get a runner (account/repo Actions setting),
+# so every run failed without testing anything. Run `npm test` locally instead.
+# To re-enable, restore the push / pull_request triggers below.
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
 
 permissions:
   contents: read

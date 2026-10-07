@@ -7,7 +7,6 @@
 **24 single-purpose, client-side tools for agent harnesses, loops, workflows, evals, cost, safety, and observability. Zero accounts. Zero dashboards. No telemetry. Grab a tool and go.**
 
 [![Live bench](https://img.shields.io/badge/live-%F0%9F%94%97%20systems--bench-blue?style=flat-square)](https://iggym.github.io/systems-bench/)
-[![CI](https://img.shields.io/github/actions/workflow/status/iggym/systems-bench/ci.yml?branch=main&style=flat-square&label=CI%20checks)](https://github.com/iggym/systems-bench/actions)
 [![Tools](https://img.shields.io/badge/tools-24-5eead4?style=flat-square&logo=wrench)](https://iggym.github.io/systems-bench/)
 [![Zero deps](https://img.shields.io/badge/dependencies-0-3fb950?style=flat-square)](https://github.com/iggym/systems-bench)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-8d99a3?style=flat-square)](LICENSE)
@@ -178,7 +177,7 @@ When working with live API keys (e.g., Gemini or Groq keys for red-teaming or mu
 
 | Signal | Status |
 |---|---|
-| CI | ✅ GitHub Actions runs the full check suite on every push |
+| CI | ⚪ Hosted CI disabled (Actions jobs never got a runner) — run `npm test` locally before merging |
 | Check suite | ✅ 25 HTML files scanned, every inline script parsed, registry contract + schemas + fixtures asserted (`npm test`) |
 | Dependencies | ✅ 0 (pure HTML/JS/CSS) |
 | License | ✅ BSD 3-Clause |
