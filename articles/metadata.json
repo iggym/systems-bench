@@ -80,6 +80,33 @@
       "reading_time_min": 10,
       "schema": "agentTrace",
       "consumed_by": ["trace-inspector", "session-cost-attributor"]
+    },
+    {
+      "slug": "schema-repair-engine",
+      "file": "schema-repair-engine.md",
+      "tool_id": "schema-repair-engine",
+      "type": "tool-deep-dive",
+      "title": "Repair LLM JSON without silently inventing data",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["harnesses", "validation"],
+      "dimensions": ["ARC", "EVA", "REL"],
+      "focus": "evaluate",
+      "reading_time_min": 7
+    },
+    {
+      "slug": "calibration-when-agent-confidence-lies",
+      "file": "calibration-when-agent-confidence-lies.md",
+      "tool_id": "decision-log-analyzor",
+      "type": "concept-explainer",
+      "tools": ["decision-log-analyzor", "behavior-drift-monitor"],
+      "title": "Calibration: when agent confidence lies",
+      "date": "2026-10-07",
+      "prompt_version": "master-prompt-v1",
+      "tags": ["observability", "evaluations", "metrics", "diagnostic"],
+      "dimensions": ["OBS", "EVA", "REL"],
+      "focus": "evaluate",
+      "reading_time_min": 8
     }
   ],
   "generated": "2026-10-07",
