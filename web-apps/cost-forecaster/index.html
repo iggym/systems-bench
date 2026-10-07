@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost Forecaster — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem}
+textarea{resize:vertical;height:180px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.72rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:400px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem;display:inline-block;margin:4px 4px 4px 0}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Cost Forecaster</h1>
+<p class="sub">Project weekly/monthly spend from current usage patterns. Input daily cost log and growth assumptions; outputs forecast timeline, best/worst-case scenarios, budget alerts. Local, deterministic.</p>
+<div class="grid">
+  <div class="card">
+    <label>Daily Cost Log (JSON array of {date, cost_usd})</label>
+    <textarea id="costLogInput" spellcheck="false">[
+  { "date": "2026-09-23", "cost_usd": 85.50 },
+  { "date": "2026-09-24", "cost_usd": 92.30 },
+  { "date": "2026-09-25", "cost_usd": 78.90 },
+  { "date": "2026-09-26", "cost_usd": 95.20 },
+  { "date": "2026-09-27", "cost_usd": 88.10 },
+  { "date": "2026-09-28", "cost_usd": 102.40 },
+  { "date": "2026-09-29", "cost_usd": 81.70 },
+  { "date": "2026-09-30", "cost_usd": 110.50 }
+]</textarea>
+    <label style="margin-top:12px">Growth Assumptions</label>
+    <label>Weekly growth rate (%):</label>
+    <input type="number" id="weeklyGrowth" value="5" min="-50" max="100" step="0.5">
+    <label>Monthly growth rate (%):</label>
+    <input type="number" id="monthlyGrowth" value="15" min="-50" max="200" step="1">
+    <label>Budget ceiling ($):</label>
+    <input type="number" id="budgetCeiling" value="3000" min="100" max="1000000">
+
+    <button onclick="forecast()">Generate Forecast</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Cost forecast</span>
+      <span id="statusBadge" class="badge b-warn">READY</span>
+    </div>
+    <div id="stats" style="margin:8px 0"></div>
+    <pre id="detail"></pre>
+    <p class="hint">Forecast future spend based on recent daily costs and growth assumptions. Computes baseline trend, applies growth rates, projects weekly and monthly totals. Alerts if forecasted spend exceeds budget. Use to plan capacity and request budget increases early.</p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+
+function forecast() {
+  let costLog;
+  try { costLog = JSON.parse($('costLogInput').value); } catch (e) { $('statusBadge').textContent = 'BAD JSON'; return; }
+  if (!Array.isArray(costLog) || costLog.length === 0) { $('statusBadge').textContent = 'EMPTY LOG'; return; }
+
+  const weeklyGrowth = parseFloat($('weeklyGrowth').value) || 5;
+  const monthlyGrowth = parseFloat($('monthlyGrowth').value) || 15;
+  const budgetCeiling = parseFloat($('budgetCeiling').value) || 3000;
+
+  const costs = costLog.map(x => x.cost_usd);
+  const avgDaily = costs.reduce((a, b) => a + b, 0) / costs.length;
+  const stdDev = Math.sqrt(costs.reduce((sq, x) => sq + Math.pow(x - avgDaily, 2), 0) / costs.length);
+
+  const currentWeekly = avgDaily * 7;
+  const currentMonthly = avgDaily * 30;
+
+  const weeklyForecast = currentWeekly * (1 + weeklyGrowth / 100);
+  const monthlyForecast = currentMonthly * (1 + monthlyGrowth / 100);
+
+  const worstCaseDaily = avgDaily + (2 * stdDev);
+  const worstWeekly = worstCaseDaily * 7 * (1 + weeklyGrowth / 100);
+  const worstMonthly = worstCaseDaily * 30 * (1 + monthlyGrowth / 100);
+
+  const bestCaseDaily = Math.max(avgDaily - (2 * stdDev), avgDaily * 0.8);
+  const bestWeekly = bestCaseDaily * 7 * (1 + weeklyGrowth / 100);
+  const bestMonthly = bestCaseDaily * 30 * (1 + monthlyGrowth / 100);
+
+  const daysUntilOverBudget = Math.max(0, Math.floor((budgetCeiling - avgDaily * 7) / (weeklyGrowth / 100 * avgDaily / 7)));
+
+  $('stats').innerHTML = `
+    <span class="stat">Avg daily: $${avgDaily.toFixed(2)}</span>
+    <span class="stat">Std dev: $${stdDev.toFixed(2)}</span>
+    <span class="stat">Forecast weekly: $${weeklyForecast.toFixed(2)}</span>
+    <span class="stat">Forecast monthly: $${monthlyForecast.toFixed(2)}</span>
+    <span class="stat">Budget ceiling: $${budgetCeiling.toFixed(2)}</span>
+  `;
+
+  let detail = `COST FORECAST REPORT\n`;
+  detail += `=====================================\n\n`;
+  detail += `HISTORICAL (${costLog.length} days):\n`;
+  detail += `  Average daily: $${avgDaily.toFixed(2)}\n`;
+  detail += `  Std deviation: $${stdDev.toFixed(2)}\n`;
+  detail += `  Min: $${Math.min(...costs).toFixed(2)}\n`;
+  detail += `  Max: $${Math.max(...costs).toFixed(2)}\n`;
+  detail += `  7-day total: $${currentWeekly.toFixed(2)}\n`;
+  detail += `  30-day extrapolated: $${currentMonthly.toFixed(2)}\n\n`;
+
+  detail += `GROWTH ASSUMPTIONS:\n`;
+  detail += `  Weekly growth: ${weeklyGrowth}%\n`;
+  detail += `  Monthly growth: ${monthlyGrowth}%\n\n`;
+
+  detail += `BEST-CASE FORECAST (avg - 2σ, then growth):\n`;
+  detail += `  Daily: $${bestCaseDaily.toFixed(2)}\n`;
+  detail += `  Weekly: $${bestWeekly.toFixed(2)}\n`;
+  detail += `  Monthly: $${bestMonthly.toFixed(2)}\n\n`;
+
+  detail += `MID-CASE FORECAST (avg + growth):\n`;
+  detail += `  Daily: $${(avgDaily * (1 + weeklyGrowth / 100 / 7)).toFixed(2)}\n`;
+  detail += `  Weekly: $${weeklyForecast.toFixed(2)}\n`;
+  detail += `  Monthly: $${monthlyForecast.toFixed(2)}\n\n`;
+
+  detail += `WORST-CASE FORECAST (avg + 2σ, then growth):\n`;
+  detail += `  Daily: $${worstCaseDaily.toFixed(2)}\n`;
+  detail += `  Weekly: $${worstWeekly.toFixed(2)}\n`;
+  detail += `  Monthly: $${worstMonthly.toFixed(2)}\n\n`;
+
+  detail += `BUDGET ANALYSIS:\n`;
+  detail += `  Budget ceiling: $${budgetCeiling.toFixed(2)}\n`;
+  detail += `  vs. mid-case monthly: ${monthlyForecast > budgetCeiling ? '🔴 OVER' : monthlyForecast > budgetCeiling * 0.9 ? '🟡 CAUTION' : '🟢 OK'}\n`;
+  detail += `  vs. worst-case monthly: ${worstMonthly > budgetCeiling ? '🔴 OVER' : worstMonthly > budgetCeiling * 0.9 ? '🟡 CAUTION' : '🟢 OK'}\n`;
+
+  if (daysUntilOverBudget > 0) {
+    detail += `  Days until over budget (linear growth): ~${daysUntilOverBudget}\n`;
+  } else {
+    detail += `  Currently tracking over monthly budget\n`;
+  }
+
+  $('detail').textContent = detail;
+
+  const status = monthlyForecast > budgetCeiling ? 'OVER_BUDGET' : monthlyForecast > budgetCeiling * 0.9 ? 'CAUTION' : 'OK';
+  $('statusBadge').textContent = status;
+  $('statusBadge').className = 'badge ' + (status === 'OVER_BUDGET' ? 'b-err' : status === 'CAUTION' ? 'b-warn' : 'b-ok');
+}
+
+forecast();
+</script>
+</body>
+</html>

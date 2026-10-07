@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow DAG Validator — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem;resize:vertical;height:280px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.71rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:400px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.error{padding:6px;margin:4px 0;background:rgba(248,81,73,.1);border-left:3px solid var(--err);color:var(--err);font-size:.72rem}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem;display:inline-block;margin:4px 4px 4px 0}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Workflow DAG Validator</h1>
+<p class="sub">Validate workflow topology for cycles, missing handlers, unreachable nodes. Input DAG edges and state machine; outputs validity status, detected cycles, isolated components, reachability matrix. Local, deterministic.</p>
+<div class="grid">
+  <div class="card">
+    <label>Workflow DAG (JSON with nodes and edges)</label>
+    <textarea id="dagInput" spellcheck="false">{
+  "nodes": [
+    { "id": "start", "type": "entry" },
+    { "id": "validate", "type": "action" },
+    { "id": "classify", "type": "action" },
+    { "id": "route_a", "type": "branch" },
+    { "id": "process_a", "type": "action" },
+    { "id": "route_b", "type": "branch" },
+    { "id": "process_b", "type": "action" },
+    { "id": "merge", "type": "action" },
+    { "id": "end", "type": "exit" }
+  ],
+  "edges": [
+    { "from": "start", "to": "validate" },
+    { "from": "validate", "to": "classify" },
+    { "from": "classify", "to": "route_a", "condition": "type==A" },
+    { "from": "classify", "to": "route_b", "condition": "type==B" },
+    { "from": "route_a", "to": "process_a" },
+    { "from": "route_b", "to": "process_b" },
+    { "from": "process_a", "to": "merge" },
+    { "from": "process_b", "to": "merge" },
+    { "from": "merge", "to": "end" }
+  ]
+}</textarea>
+    <button onclick="validate()">Validate DAG</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Validation report</span>
+      <span id="statusBadge" class="badge b-ok">READY</span>
+    </div>
+    <div id="stats" style="margin:8px 0"></div>
+    <div id="errors" style="margin:8px 0"></div>
+    <pre id="detail"></pre>
+    <p class="hint">Validates workflow DAG structure: detects cycles, orphaned nodes (unreachable from entry), dangling edges (target not in nodes), and missing exit handlers. Essential for preventing silent workflow failures in production.</p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+
+function validate() {
+  let dag;
+  try { dag = JSON.parse($('dagInput').value); } catch (e) { $('statusBadge').textContent = 'BAD JSON'; $('statusBadge').className = 'badge b-err'; return; }
+
+  const errors = [];
+  const nodes = dag.nodes || [];
+  const edges = dag.edges || [];
+  const nodeIds = new Set(nodes.map(n => n.id));
+
+  let entryCount = 0, exitCount = 0;
+
+  // Check: at least one entry and exit
+  for (const node of nodes) {
+    if (node.type === 'entry') entryCount++;
+    if (node.type === 'exit') exitCount++;
+  }
+
+  if (entryCount === 0) errors.push('No entry node found (type=entry)');
+  if (exitCount === 0) errors.push('No exit node found (type=exit)');
+  if (entryCount > 1) errors.push(`Multiple entry nodes (${entryCount} found)`);
+  if (exitCount > 1) errors.push(`Multiple exit nodes (${exitCount} found)`);
+
+  // Check: dangling edges
+  for (const edge of edges) {
+    if (!nodeIds.has(edge.from)) errors.push(`Edge from undefined node "${edge.from}"`);
+    if (!nodeIds.has(edge.to)) errors.push(`Edge to undefined node "${edge.to}"`);
+  }
+
+  // Check: cycles (DFS)
+  const adj = new Map();
+  for (const node of nodes) adj.set(node.id, []);
+  for (const edge of edges) {
+    adj.get(edge.from).push(edge.to);
+  }
+
+  const visited = new Set(), recStack = new Set();
+  const cycles = [];
+
+  function dfs(node, path) {
+    visited.add(node);
+    recStack.add(node);
+    path.push(node);
+
+    for (const neighbor of adj.get(node) || []) {
+      if (!visited.has(neighbor)) {
+        dfs(neighbor, path);
+      } else if (recStack.has(neighbor)) {
+        const cycleStart = path.indexOf(neighbor);
+        const cycle = path.slice(cycleStart).concat([neighbor]);
+        cycles.push(cycle.join(' → '));
+      }
+    }
+
+    path.pop();
+    recStack.delete(node);
+  }
+
+  for (const node of nodes) {
+    if (!visited.has(node.id)) {
+      dfs(node.id, []);
+    }
+  }
+
+  if (cycles.length > 0) {
+    errors.push(`Detected ${cycles.length} cycle(s): ${cycles.join(', ')}`);
+  }
+
+  // Check: reachability from entry
+  const entryNode = nodes.find(n => n.type === 'entry');
+  const reachable = new Set();
+  const queue = [entryNode.id];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (reachable.has(current)) continue;
+    reachable.add(current);
+    for (const neighbor of adj.get(current) || []) {
+      if (!reachable.has(neighbor)) queue.push(neighbor);
+    }
+  }
+
+  const unreachable = nodes.filter(n => !reachable.has(n.id) && n.type !== 'entry');
+  if (unreachable.length > 0) {
+    errors.push(`Unreachable nodes: ${unreachable.map(n => n.id).join(', ')}`);
+  }
+
+  // Check: all paths lead to exit
+  const exitNode = nodes.find(n => n.type === 'exit');
+  const adjReverse = new Map();
+  for (const node of nodes) adjReverse.set(node.id, []);
+  for (const edge of edges) {
+    adjReverse.get(edge.to).push(edge.from);
+  }
+
+  const leadToExit = new Set();
+  const queueRev = [exitNode.id];
+
+  while (queueRev.length > 0) {
+    const current = queueRev.shift();
+    if (leadToExit.has(current)) continue;
+    leadToExit.add(current);
+    for (const neighbor of adjReverse.get(current) || []) {
+      if (!leadToExit.has(neighbor)) queueRev.push(neighbor);
+    }
+  }
+
+  const deadEnds = nodes.filter(n => !leadToExit.has(n.id) && n.type !== 'exit');
+  if (deadEnds.length > 0) {
+    errors.push(`Dead-end nodes (don't lead to exit): ${deadEnds.map(n => n.id).join(', ')}`);
+  }
+
+  const isValid = errors.length === 0;
+
+  $('stats').innerHTML = `
+    <span class="stat">Nodes: ${nodes.length}</span>
+    <span class="stat">Edges: ${edges.length}</span>
+    <span class="stat">Entry: ${entryCount}</span>
+    <span class="stat">Exit: ${exitCount}</span>
+    <span class="stat">Cycles: ${cycles.length}</span>
+  `;
+
+  let errorHtml = '';
+  if (errors.length > 0) {
+    for (const err of errors) {
+      errorHtml += `<div class="error">✗ ${err}</div>`;
+    }
+  }
+  $('errors').innerHTML = errorHtml;
+
+  let detail = `DAG VALIDATION REPORT\n`;
+  detail += `=====================================\n\n`;
+  detail += `STRUCTURE:\n`;
+  detail += `  Nodes: ${nodes.length}\n`;
+  detail += `  Edges: ${edges.length}\n`;
+  detail += `  Entry nodes: ${entryCount}\n`;
+  detail += `  Exit nodes: ${exitCount}\n\n`;
+
+  detail += `TOPOLOGY:\n`;
+  detail += `  Reachable from entry: ${reachable.size}\n`;
+  detail += `  Lead to exit: ${leadToExit.size}\n`;
+  detail += `  Unreachable: ${unreachable.length}\n`;
+  detail += `  Dead-ends: ${deadEnds.length}\n\n`;
+
+  detail += `CYCLES:\n`;
+  detail += cycles.length === 0 ? `  None detected ✓\n` : cycles.map(c => `  ${c}\n`).join('');
+
+  detail += `\nVALIDATION:\n`;
+  detail += `  Status: ${isValid ? '✓ VALID' : '✗ INVALID'}\n`;
+  if (!isValid) {
+    detail += `  Errors: ${errors.length}\n`;
+    for (const err of errors) {
+      detail += `    • ${err}\n`;
+    }
+  }
+
+  $('detail').textContent = detail;
+
+  $('statusBadge').textContent = isValid ? 'VALID' : 'INVALID';
+  $('statusBadge').className = 'badge ' + (isValid ? 'b-ok' : 'b-err');
+}
+
+validate();
+</script>
+</body>
+</html>

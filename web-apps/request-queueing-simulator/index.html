@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request Queueing Simulator — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+input{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem;margin-bottom:6px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.71rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:400px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem;display:inline-block;margin:4px 4px 4px 0}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>Request Queueing Simulator</h1>
+<p class="sub">Model queue behavior under load with priorities, timeouts, and backpressure. Input arrival rate, service time, queue limits; outputs queue depth, wait times, rejection rate, SLA violations. Local, deterministic.</p>
+<div class="grid">
+  <div class="card">
+    <label>Arrival & Service Parameters</label>
+    <label>Arrival rate (requests/sec):</label>
+    <input type="number" id="arrivalRate" value="50" min="1" max="1000" step="1">
+    <label>Service rate (requests/sec):</label>
+    <input type="number" id="serviceRate" value="40" min="1" max="1000" step="1">
+    <label>Mean service time (ms):</label>
+    <input type="number" id="meanServiceTime" value="25" min="5" max="5000">
+
+    <label style="margin-top:12px">Queue Configuration</label>
+    <label>Max queue depth:</label>
+    <input type="number" id="maxQueueDepth" value="100" min="10" max="10000">
+    <label>Request timeout (ms):</label>
+    <input type="number" id="requestTimeout" value="5000" min="100" max="60000">
+    <label>Enable priority queue:</label>
+    <input type="checkbox" id="enablePriority" checked>
+
+    <label style="margin-top:12px">Simulation</label>
+    <label>Duration (seconds):</label>
+    <input type="number" id="duration" value="60" min="10" max="600">
+
+    <button onclick="simulate()">Run Simulation</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Queue simulation results</span>
+      <span id="statusBadge" class="badge b-warn">READY</span>
+    </div>
+    <div id="stats" style="margin:8px 0"></div>
+    <pre id="detail"></pre>
+    <p class="hint">Simulate request queue under load. Arrival rate > service rate creates backlog. Queue depth grows until timeout or max-depth is hit, causing rejections. SLA = requests served within timeout. Priority queues improve high-priority latencies at the cost of fairness.</p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+
+function simulate() {
+  const arrivalRate = parseFloat($('arrivalRate').value) || 50;
+  const serviceRate = parseFloat($('serviceRate').value) || 40;
+  const meanServiceTime = parseFloat($('meanServiceTime').value) || 25;
+  const maxQueueDepth = parseInt($('maxQueueDepth').value) || 100;
+  const requestTimeout = parseInt($('requestTimeout').value) || 5000;
+  const duration = parseFloat($('duration').value) || 60;
+  const usePriority = $('enablePriority').checked;
+
+  const timePerReq = 1000 / arrivalRate;
+  const queue = [];
+  let processed = 0, rejected = 0, timedOut = 0, served = 0;
+  let totalWaitTime = 0, maxQueueSize = 0;
+  const waitTimes = [], queueSizes = [];
+
+  let currentTime = 0;
+  let nextArrival = timePerReq;
+  let nextCompletion = meanServiceTime;
+
+  while (currentTime < duration * 1000) {
+    if (nextArrival <= nextCompletion) {
+      currentTime = nextArrival;
+      const priority = Math.random() < 0.2 ? 'high' : 'normal';
+      const arrivalTime = currentTime;
+
+      if (queue.length >= maxQueueDepth) {
+        rejected++;
+      } else {
+        if (usePriority && priority === 'high') {
+          queue.unshift({ arrivalTime, priority });
+        } else {
+          queue.push({ arrivalTime, priority });
+        }
+      }
+
+      nextArrival += timePerReq;
+    } else {
+      currentTime = nextCompletion;
+
+      if (queue.length > 0) {
+        const req = queue.shift();
+        const waitTime = currentTime - req.arrivalTime;
+
+        if (waitTime > requestTimeout) {
+          timedOut++;
+        } else {
+          served++;
+          totalWaitTime += waitTime;
+          waitTimes.push(waitTime);
+        }
+
+        processed++;
+        nextCompletion += meanServiceTime;
+      } else {
+        nextCompletion = nextArrival + meanServiceTime;
+      }
+    }
+
+    maxQueueSize = Math.max(maxQueueSize, queue.length);
+    queueSizes.push(queue.length);
+  }
+
+  waitTimes.sort((a, b) => a - b);
+  const p50Wait = waitTimes[Math.floor(waitTimes.length * 0.5)] || 0;
+  const p95Wait = waitTimes[Math.floor(waitTimes.length * 0.95)] || 0;
+  const p99Wait = waitTimes[Math.floor(waitTimes.length * 0.99)] || 0;
+  const avgWait = totalWaitTime / Math.max(1, served);
+
+  const totalRequests = processed + rejected;
+  const rejectionRate = ((rejected / totalRequests) * 100).toFixed(1);
+  const slaViolationRate = ((timedOut / totalRequests) * 100).toFixed(1);
+  const avgQueueSize = queueSizes.reduce((a, b) => a + b, 0) / queueSizes.length;
+
+  $('stats').innerHTML = `
+    <span class="stat">Requests: ${totalRequests}</span>
+    <span class="stat">Served: ${served}</span>
+    <span class="stat">Rejected: ${rejected} (${rejectionRate}%)</span>
+    <span class="stat">Timed out: ${timedOut} (${slaViolationRate}%)</span>
+    <span class="stat">Avg queue: ${avgQueueSize.toFixed(1)}</span>
+    <span class="stat">Max queue: ${maxQueueSize}</span>
+  `;
+
+  let detail = `REQUEST QUEUEING SIMULATION\n`;
+  detail += `=====================================\n\n`;
+  detail += `PARAMETERS:\n`;
+  detail += `  Arrival rate: ${arrivalRate} req/s\n`;
+  detail += `  Service rate: ${serviceRate} req/s\n`;
+  detail += `  Mean service time: ${meanServiceTime}ms\n`;
+  detail += `  Max queue depth: ${maxQueueDepth}\n`;
+  detail += `  Request timeout: ${requestTimeout}ms\n`;
+  detail += `  Priority queue: ${usePriority ? 'enabled' : 'disabled'}\n`;
+  detail += `  Duration: ${duration}s\n\n`;
+
+  detail += `QUEUE BEHAVIOR:\n`;
+  detail += `  Total arrivals: ${totalRequests}\n`;
+  detail += `  Served: ${served}\n`;
+  detail += `  Rejected (queue full): ${rejected} (${rejectionRate}%)\n`;
+  detail += `  Timed out (waited > ${requestTimeout}ms): ${timedOut} (${slaViolationRate}%)\n\n`;
+
+  detail += `WAIT TIME (served requests only):\n`;
+  detail += `  Average: ${avgWait.toFixed(1)}ms\n`;
+  detail += `  p50: ${p50Wait.toFixed(1)}ms\n`;
+  detail += `  p95: ${p95Wait.toFixed(1)}ms\n`;
+  detail += `  p99: ${p99Wait.toFixed(1)}ms\n\n`;
+
+  detail += `QUEUE DEPTH:\n`;
+  detail += `  Average: ${avgQueueSize.toFixed(1)} requests\n`;
+  detail += `  Maximum: ${maxQueueSize} requests\n`;
+  detail += `  Steady-state (implied): ${Math.max(0, (arrivalRate - serviceRate) * (meanServiceTime / 1000)).toFixed(1)} req\n\n`;
+
+  detail += `SLA ANALYSIS:\n`;
+  const slaTarget = requestTimeout;
+  const slaMet = served - timedOut;
+  const slaMetRate = ((slaMet / totalRequests) * 100).toFixed(1);
+  detail += `  SLA target: ${slaTarget}ms\n`;
+  detail += `  Requests meeting SLA: ${slaMet} (${slaMetRate}%)\n`;
+  detail += `  Recommendations:\n`;
+
+  if (rejectionRate > 5) {
+    detail += `    • Increase max queue depth or service rate\n`;
+  }
+  if (slaViolationRate > 10) {
+    detail += `    • Reduce timeout or increase service rate\n`;
+  }
+  if (arrivalRate > serviceRate * 1.2) {
+    detail += `    • Add capacity (service rate must exceed arrival rate)\n`;
+  }
+
+  $('detail').textContent = detail;
+
+  const status = rejectionRate > 5 || slaViolationRate > 10 ? 'DEGRADED' : arrivalRate > serviceRate ? 'OVERLOADED' : 'HEALTHY';
+  $('statusBadge').textContent = status;
+  $('statusBadge').className = 'badge ' + (status === 'DEGRADED' ? 'b-err' : status === 'OVERLOADED' ? 'b-warn' : 'b-ok');
+}
+
+simulate();
+</script>
+</body>
+</html>

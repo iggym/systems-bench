@@ -789,6 +789,115 @@
       "dateAdded": "2026-08-01",
       "updated": "2026-10-07",
       "notes": "Deterministic simulation of the spec — it does not execute real agents. Mermaid export is a flowchart subset; edges to missing nodes are dropped."
+    },
+    {
+      "id": "token-budget-planner",
+      "name": "Token Budget Planner",
+      "url": "web-apps/token-budget-planner/index.html",
+      "description": "Plan token budgets for multi-turn sessions and concurrent users. Input model pricing, session structure, and parallelism; outputs max tokens/hour, cost per interaction, per-request allowance.",
+      "tags": [
+        "capacity-planning",
+        "tokens",
+        "cost"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "scale",
+        "tooling"
+      ],
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07",
+      "notes": "Deterministic budget math based on pricing per 1M tokens, session structure (turns and tokens per turn), and concurrent user load. Outputs utilization percentage, headroom, per-request token allowance, and hourly rate limits."
+    },
+    {
+      "id": "load-simulator",
+      "name": "Load Simulator",
+      "url": "web-apps/load-simulator/index.html",
+      "description": "Model concurrent requests, latency profiles, and error rates. Input traffic pattern, response distribution, and endpoint config; outputs throughput, p50/p95/p99 latencies, error rate impact.",
+      "tags": [
+        "capacity-planning",
+        "performance",
+        "latency",
+        "diagnostic"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "scale",
+        "reliability",
+        "tooling"
+      ],
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07",
+      "notes": "Simulates concurrent request load under normal latency distribution. Measures throughput, percentile latencies (p50/p95/p99), error rates, retry overhead, and timeout behavior. Use to validate timeout thresholds and identify bottlenecks."
+    },
+    {
+      "id": "cost-forecaster",
+      "name": "Cost Forecaster",
+      "url": "web-apps/cost-forecaster/index.html",
+      "description": "Project weekly/monthly spend from current usage patterns. Input daily cost log and growth assumptions; outputs forecast timeline, best/worst-case scenarios, budget alerts.",
+      "tags": [
+        "cost",
+        "capacity-planning",
+        "metrics"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "scale",
+        "observability"
+      ],
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07",
+      "notes": "Projects future spend based on recent daily costs and growth assumptions. Computes baseline trend, applies growth rates, projects weekly and monthly totals with best/worst-case scenarios. Alerts if forecasted spend exceeds budget ceiling."
+    },
+    {
+      "id": "workflow-dag-validator",
+      "name": "Workflow DAG Validator",
+      "url": "web-apps/workflow-dag-validator/index.html",
+      "description": "Validate workflow topology for cycles, missing handlers, unreachable nodes. Input DAG edges and state machine; outputs validity status, detected cycles, isolated components, reachability matrix.",
+      "tags": [
+        "orchestration",
+        "workflows",
+        "validation"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "design",
+      "dimensions": [
+        "orchestration",
+        "architecture"
+      ],
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07",
+      "notes": "Validates workflow DAG structure: detects cycles via depth-first search, orphaned nodes (unreachable from entry), dangling edges (target not in nodes), and missing exit handlers. Essential for preventing silent workflow failures."
+    },
+    {
+      "id": "request-queueing-simulator",
+      "name": "Request Queueing Simulator",
+      "url": "web-apps/request-queueing-simulator/index.html",
+      "description": "Model queue behavior under load with priorities, timeouts, and backpressure. Input arrival rate, service time, queue limits; outputs queue depth, wait times, rejection rate, SLA violations.",
+      "tags": [
+        "capacity-planning",
+        "performance",
+        "latency",
+        "diagnostic"
+      ],
+      "status": "live",
+      "mode": "local",
+      "focus": "operate",
+      "dimensions": [
+        "tooling",
+        "reliability",
+        "safety"
+      ],
+      "dateAdded": "2026-10-07",
+      "updated": "2026-10-07",
+      "notes": "Simulates M/M/1 queue behavior: arrival rate > service rate creates backlog. Models request timeout, max queue depth, rejection when full, and optional priority queueing. Outputs SLA compliance, queue statistics, and capacity recommendations."
     }
   ],
   "registryVersion": 3,
