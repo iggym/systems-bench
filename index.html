@@ -449,7 +449,8 @@
       return;
     }
 
-    pegboard.innerHTML = filtered.map((a, i) => {
+    pegboard.innerHTML = filtered.map(a => {
+      // Stable short number from registry order (alphabetical by id), independent of filters/sort.
       const id = String(a._num).padStart(3, '0');
       const tags = (a.tags || []).map(t => '<span class="tag">' + escapeHtml(t) + '</span>').join('');
       const date = a.dateAdded ? formatDate(a.dateAdded) : '';
@@ -505,8 +506,9 @@
   }
 
   function init(data){
-    // stable registry number (position in apps.json), independent of sort order and filters
-    apps = (data.apps || []).map((a, i) => Object.assign({ _num: i + 1 }, a))
+    apps = (data.apps || []).slice()
+      .sort((a,b) => (a.id||'').localeCompare(b.id||''))
+      .map((a, i) => Object.assign({}, a, { _num: i + 1 }))
       .sort((a,b) => (b.dateAdded||'').localeCompare(a.dateAdded||''));
 
     populateSelects(data);

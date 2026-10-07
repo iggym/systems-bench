@@ -65,7 +65,7 @@ th:first-child,td:first-child{text-align:left}
       <span id="statusBadge" class="badge b-warn">READY</span>
     </div>
     <pre id="report">Adjust inputs; the report recomputes live.</pre>
-    <p class="hint">In-flight data = bandwidth × RTT (Little's law: the bytes you must have in flight to keep a link busy). A link is considered "kept busy" at ≥ ~60% utilization in practice. Bottleneck rules are stated in the report — they are heuristics, not physics.</p>
+    <p class="hint">In-flight data = bandwidth × RTT (Little's law: the bytes you must have in flight to keep a link busy). Link speed is entered in gigabits/s and converted to bytes (÷ 8) before it is compared with workload bytes/s. IOPS assumes one I/O per request regardless of size. A link is considered "kept busy" at ≥ ~60% utilization in practice. Bottleneck rules are stated in the report — they are heuristics, not physics.</p>
   </div>
 </div>
 <script>
@@ -92,31 +92,41 @@ function renderRefs() {
 }
 function resetRefs() { renderRefs(); }
 
+// @pure-start — capacity math; tests/check.mjs evaluates this block directly
+// Link speeds are in bits/s; workload volume is in bytes/s. Convert once, here.
+function capacityModel(i) {
+  const rttS = i.rttMs / 1000;
+  const linkBitsPerS = i.linkGbps * 1e9;
+  const linkBytesPerS = linkBitsPerS / 8;
+  const bytesInFlight = linkBytesPerS * rttS;        // Little's law: bandwidth × delay
+  const readBytes = i.readQps * i.readKb * 1024;
+  const writeBytes = i.writeQps * i.writeKb * 1024;
+  const totalBytes = readBytes + writeBytes;          // bytes/s the workload moves
+  const totalQps = i.readQps + i.writeQps;
+  const util = linkBytesPerS ? totalBytes / linkBytesPerS : Infinity;
+  const perReq = totalQps ? totalBytes / totalQps / 1024 : 0;   // KB/request
+  return { rttS, linkBitsPerS, linkBytesPerS, bytesInFlight, totalBytes, totalQps, util, perReq,
+    requiredGbps: totalBytes * 8 / 1e9, iopsNeeded: totalQps };
+}
+// @pure-end
+
 function calc() {
   const readQps = num('readQps'), readKb = num('readKb');
   const writeQps = num('writeQps'), writeKb = num('writeKb');
   const rttMs = num('rtt'), linkGbps = num('linkGbps'), sla = num('sla');
   const iopsDisk = num('iopsDisk');
-
-  const rttS = rttMs / 1000;
-  const linkBps = linkGbps * 1e9;
-  const bytesInFlight = linkBps * rttS;            // Little's law
-  const readBytes = readQps * readKb * 1024;
-  const writeBytes = writeQps * writeKb * 1024;
-  const totalBytes = readBytes + writeBytes;
-  const totalQps = readQps + writeQps;
+  const m = capacityModel({ readQps, readKb, writeQps, writeKb, rttMs, linkGbps });
+  const { bytesInFlight, totalBytes, totalQps, util, perReq } = m;
+  const linkBps = m.linkBytesPerS;
   const requiredBps = totalBytes;
-  const util = requiredBps / linkBps;
-  const perReq = totalQps ? totalBytes / totalQps / 1024 : 0;
-  const gbps = requiredBps / 1e9;
-
+  const gbps = m.requiredGbps;
   // bottleneck heuristics
   const issues = [];
   if (util > 1) issues.push(`NETWORK OVERSUBSCRIBED — workload needs ${(gbps).toFixed(2)} Gbps on a ${linkGbps} Gbps link. In-flight budget is only ${(bytesInFlight/1024).toFixed(1)} KB; at ${perReq.toFixed(1)} KB/request that covers ~${Math.floor(bytesInFlight/(perReq*1024))} concurrent requests before the pipe stalls.`);
   else if (util > 0.6) issues.push(`LINK HEAVY — ${(util*100).toFixed(0)}% of ${linkGbps} Gbps used; plan for a wider NIC or compression before adding traffic.`);
   else issues.push(`Link healthy: ${(util*100).toFixed(1)}% of ${linkGbps} Gbps.`);
   if (rttMs > sla) issues.push(`LATENCY SLA VIOLATION — RTT ${rttMs} ms exceeds SLA ${sla} ms before any queueing. Move the workload closer or relax the SLA.`);
-  const iopsNeeded = readQps + writeQps;
+  const iopsNeeded = m.iopsNeeded;
   if (iopsNeeded > iopsDisk) issues.push(`IOPS BOUND — need ${iopsNeeded.toLocaleString()} IOPS but the disk tier caps at ${iopsDisk.toLocaleString()}. Add disks or move to a faster tier.`);
   else if (iopsDisk > 0) issues.push(`IOPS fine: ${iopsNeeded.toLocaleString()} of ${iopsDisk.toLocaleString()} IOPS (${(iopsNeeded/iopsDisk*100).toFixed(0)}%).`);
 
@@ -134,7 +144,7 @@ WORKLOAD
   total   : ${totalQps.toLocaleString()} qps, ${perReq.toFixed(1)} KB/req avg, ${(totalBytes/1e6).toFixed(1)} MB/s
 
 LITTLE'S LAW (in-flight bytes = bandwidth × RTT)
-  link            : ${linkGbps} Gbps (${(linkBps/1e9).toFixed(1)} GB/s)
+  link            : ${linkGbps} Gbps (${(linkBps/1e9).toFixed(2)} GB/s)
   RTT             : ${rttMs} ms
   in-flight budget: ${(bytesInFlight/1024).toFixed(1)} KB ≈ ${(bytesInFlight/(perReq*1024)||0).toFixed(0)} concurrent requests
 

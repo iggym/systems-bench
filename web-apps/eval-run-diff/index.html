@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eval Run Diff — systems-bench</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--warn:#d29922;--err:#f85149;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:1200px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:4px}
+p.sub{color:var(--muted);font-size:.85rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px}
+label{display:block;font-size:.72rem;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;letter-spacing:.4px}
+textarea,input{width:100%;background:#010409;border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px;font-family:var(--mono);font-size:.76rem}
+textarea{resize:vertical;height:180px}
+button{background:var(--accent);color:#000;font-weight:700;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.82rem;margin-top:10px;margin-right:8px}
+button.sec{background:#21262d;color:var(--text);border:1px solid var(--border)}
+pre{background:#010409;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:.72rem;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:400px;overflow:auto}
+.badge{display:inline-block;font-size:.65rem;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:10px;letter-spacing:.5px}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid rgba(63,185,80,.4)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid rgba(210,153,34,.4)}
+.b-err{background:rgba(248,81,73,.15);color:var(--err);border:1px solid rgba(248,81,73,.4)}
+.stat{background:#010409;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:.75rem;display:inline-block;margin:4px 4px 4px 0}
+.hint{font-size:.75rem;color:var(--muted);margin-top:6px;line-height:1.5}
+.diff-row{padding:6px 8px;margin:4px 0;border-left:3px solid var(--border);font-family:var(--mono);font-size:.71rem}
+.diff-improve{border-left-color:var(--ok);background:rgba(63,185,80,.08)}
+.diff-regress{border-left-color:var(--err);background:rgba(248,81,73,.08)}
+.diff-same{border-left-color:var(--muted);color:var(--muted)}
+</style>
+</head>
+<body>
+<h1>Eval Run Diff</h1>
+<p class="sub">Compare two evaluation runs (golden-set or rubric scores) and surface regressions. Input two result sets; outputs per-sample deltas, aggregate metrics, and a ranked list of biggest changes. Local, deterministic.</p>
+<div class="grid">
+  <div class="card">
+    <label>Baseline Run (JSON array of {id, score, pass})</label>
+    <textarea id="baselineInput" spellcheck="false">[
+  { "id": "q_001", "score": 0.92, "pass": true, "metric": "rouge_l" },
+  { "id": "q_002", "score": 0.78, "pass": true, "metric": "rouge_l" },
+  { "id": "q_003", "score": 0.45, "pass": false, "metric": "rouge_l" },
+  { "id": "q_004", "score": 0.88, "pass": true, "metric": "rouge_l" },
+  { "id": "q_005", "score": 0.65, "pass": true, "metric": "rouge_l" }
+]</textarea>
+    <label style="margin-top:12px">Candidate Run (JSON array)</label>
+    <textarea id="candidateInput" spellcheck="false">[
+  { "id": "q_001", "score": 0.88, "pass": true, "metric": "rouge_l" },
+  { "id": "q_002", "score": 0.81, "pass": true, "metric": "rouge_l" },
+  { "id": "q_003", "score": 0.52, "pass": true, "metric": "rouge_l" },
+  { "id": "q_004", "score": 0.85, "pass": true, "metric": "rouge_l" },
+  { "id": "q_005", "score": 0.60, "pass": false, "metric": "rouge_l" }
+]</textarea>
+    <button onclick="compare()">Compute Diff</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700">Diff report</span>
+      <span id="statusBadge" class="badge b-warn">READY</span>
+    </div>
+    <div id="summary" style="margin:8px 0"></div>
+    <div id="regressions"></div>
+    <pre id="detail"></pre>
+    <p class="hint">Compare two runs (baseline and candidate) sample-by-sample. Regressions = score drops or pass→fail. Improvements = score gains or fail→pass. Stability = no change. This is a static comparison tool — use it to spot which samples broke when you changed a prompt or model.</p>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+
+function compare() {
+  let baseline, candidate;
+  try { baseline = JSON.parse($('baselineInput').value); } catch (e) { $('statusBadge').textContent = 'BAD BASELINE'; return; }
+  try { candidate = JSON.parse($('candidateInput').value); } catch (e) { $('statusBadge').textContent = 'BAD CANDIDATE'; return; }
+
+  const baselineMap = Object.fromEntries(baseline.map(s => [s.id, s]));
+  const deltas = [];
+
+  for (const cand of candidate) {
+    const base = baselineMap[cand.id];
+    if (!base) { deltas.push({ id: cand.id, type: 'new', delta: 0, baseMark: '—', candMark: cand.score.toFixed(2) }); continue; }
+
+    const delta = cand.score - base.score;
+    const basePass = base.pass ? '✓' : '✗';
+    const candPass = cand.pass ? '✓' : '✗';
+    let type = 'same';
+
+    if (cand.pass && !base.pass) type = 'improve';
+    else if (!cand.pass && base.pass) type = 'regress';
+    else if (delta > 0.05) type = 'improve';
+    else if (delta < -0.05) type = 'regress';
+
+    deltas.push({ id: cand.id, type, delta, baseMark: basePass + ' ' + base.score.toFixed(2), candMark: candPass + ' ' + cand.score.toFixed(2) });
+  }
+
+  for (const base of baseline) {
+    if (!candidate.find(c => c.id === base.id)) {
+      deltas.push({ id: base.id, type: 'missing', delta: 0, baseMark: base.score.toFixed(2), candMark: '—' });
+    }
+  }
+
+  const regressions = deltas.filter(d => d.type === 'regress').sort((a, b) => a.delta - b.delta);
+  const improvements = deltas.filter(d => d.type === 'improve').sort((a, b) => b.delta - a.delta);
+  const stable = deltas.filter(d => d.type === 'same').length;
+  const newSamples = deltas.filter(d => d.type === 'new').length;
+  const missing = deltas.filter(d => d.type === 'missing').length;
+
+  $('summary').innerHTML = `
+    <span class="stat">Regressions: <b>${regressions.length}</b></span>
+    <span class="stat">Improvements: <b>${improvements.length}</b></span>
+    <span class="stat">Stable: <b>${stable}</b></span>
+    <span class="stat">New/Missing: <b>${newSamples}/${missing}</b></span>
+  `;
+
+  let html = '';
+  if (regressions.length > 0) {
+    html += '<div><b>🔴 Regressions (top 5):</b>';
+    for (const d of regressions.slice(0, 5)) {
+      html += `<div class="diff-row diff-regress">${d.id}: ${d.baseMark} → ${d.candMark} (Δ ${(d.delta * 100).toFixed(1)}%)</div>`;
+    }
+    html += '</div>';
+  }
+
+  if (improvements.length > 0) {
+    html += '<div style="margin-top:8px"><b>🟢 Improvements (top 5):</b>';
+    for (const d of improvements.slice(0, 5)) {
+      html += `<div class="diff-row diff-improve">${d.id}: ${d.baseMark} → ${d.candMark} (Δ +${(d.delta * 100).toFixed(1)}%)</div>`;
+    }
+    html += '</div>';
+  }
+
+  $('regressions').innerHTML = html;
+
+  let detail = `BASELINE: ${baseline.length} samples, avg score: ${(baseline.reduce((s, x) => s + x.score, 0) / baseline.length).toFixed(3)}\n`;
+  detail += `CANDIDATE: ${candidate.length} samples, avg score: ${(candidate.reduce((s, x) => s + x.score, 0) / candidate.length).toFixed(3)}\n\n`;
+  detail += 'DELTAS:\n';
+  for (const d of deltas) {
+    detail += `${d.type.padEnd(8)} | ${d.id.padEnd(8)} | ${d.baseMark.padEnd(8)} → ${d.candMark.padEnd(8)} | Δ ${(d.delta * 100).toFixed(1).padStart(6)}%\n`;
+  }
+
+  $('detail').textContent = detail;
+  $('statusBadge').textContent = regressions.length > 0 ? 'REGRESSIONS FOUND' : 'CLEAN';
+  $('statusBadge').className = 'badge ' + (regressions.length > 0 ? 'b-err' : 'b-ok');
+}
+</script>
+</body>
+</html>
